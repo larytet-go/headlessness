@@ -187,7 +187,7 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	}
 
 	if _, ok := el.requests[requestID]; ok {
-		log.Printf("Request %s already in the map for url %s", documentURL, el.url)
+		log.Printf("Request %s already in the map for url %s", url, documentURL)
 	}
 	el.requests[requestID] = &Request{
 		URL:       r.Request.URL,
@@ -204,7 +204,7 @@ func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
 	defer el.mutex.Unlock()
 
 	if _, ok := el.requests[requestID]; !ok {
-		log.Printf("Request %s is missing in the map for url %s", url, el.url)
+		log.Printf("Request %s is missing in the map", url)
 		return
 	}
 	request := el.requests[requestID]
