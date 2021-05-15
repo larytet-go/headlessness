@@ -23,7 +23,7 @@ type contextWithCancel struct {
 }
 
 type eventListener struct {
-	url      string
+	urls      map[string]struct{}
 	requests map[network.RequestID]*Request
 	mutex    sync.Mutex
 }
@@ -103,11 +103,11 @@ func New() (browser *Browser, err error) {
 	browser.execAllocator.ctx, browser.execAllocator.cancel = NewExecAllocator(context.Background(), opts...)
 	browser.browserContext.ctx, browser.browserContext.cancel = NewContext(
 		browser.execAllocator.ctx,
-		WithErrorf(log.Printf), //WithDebugf(log.Printf),
+		WithDebugf(log.Printf), //WithErrorf(log.Printf),
 	)
 	browser.eventListener = &eventListener{
-		url:      "test",
 		requests: map[network.RequestID]*Request{},
+		urls: map[string]struct{},
 	}
 
 	// https://github.com/chromedp/chromedp/issues/679
@@ -159,12 +159,24 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 	}
 }
 
+func (el *eventListener) addDocumentURL(url string) int {
+	el.mutex.Lock()
+	defer el.mutex.Unlock()
+
+	el.urls[url] = struct{}{}
+}
+
+func (el *eventListener) removeDocumentURL(url string) {
+	el.mutex.Lock()
+	defer el.mutex.Unlock()
+
+	delete(el.urls[url], url)
+}
+
 func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
-	fmt.Printf("requestWillBeSent \n")
 	now := time.Now()
 	documentURL := r.DocumentURL
-	if documentURL != el.url {
-		fmt.Printf("requestWillBeSent documentURL %s el.url %s\n", documentURL, el.url)
+	if _, ok :=  el.urls[documentURL] {
 		return
 	}
 	requestID := r.RequestID
@@ -174,7 +186,7 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	defer el.mutex.Unlock()
 
 	if _, ok := el.requests[requestID]; ok {
-		log.Printf("Request %s already in the map for url %s", url, el.url)
+		log.Printf("Request %s already in the map for url %s", documentURL, el.url)
 	}
 	el.requests[requestID] = &Request{
 		URL:       r.Request.URL,
@@ -183,7 +195,6 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 }
 
 func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
-	fmt.Printf("responseReceived \n")
 	now := time.Now()
 	requestID := r.RequestID
 	url := r.Response.URL
@@ -192,7 +203,7 @@ func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
 	defer el.mutex.Unlock()
 
 	if _, ok := el.requests[requestID]; !ok {
-		log.Printf("Request %s already in the map for url %s", url, el.url)
+		log.Printf("Request %s is missing in the map for url %s", url, el.url)
 		return
 	}
 	request := el.requests[requestID]
@@ -211,10 +222,12 @@ func (el *eventListener) dumpCollectedRequests() (requests []Request) {
 }
 
 func (b *Browser) report(url string) (report *Report, err error) {
-
 	report = &Report{URL: url,
 		Requests: []Request{},
 	}
+
+	b.eventListener.addDocumentURL(url)
+	defer b.eventListener.removeDocumentURL(url)
 
 	var screenshot []byte
 	var content string
