@@ -186,10 +186,10 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 		return
 	}
 
-	if request, ok := el.requests[requestID]; ok {
+	redirectResponse := r.RedirectResponse
+	if request, ok := el.requests[requestID]; ok && redirectResponse == nil {
 		log.Printf("Request %s already is in the map for url %s: request=%v, event=%v", url, documentURL, request, r)
 	}
-	redirectResponse := r.RedirectResponse
 	if redirectResponse != nil {
 		el.redirects = append(el.redirects, redirectResponse.URL)
 	}
