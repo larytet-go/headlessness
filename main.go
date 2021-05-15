@@ -8,13 +8,14 @@ import (
 	"log"
 
 	. "github.com/chromedp/chromedp"
+	"time"
 )
 
 func getChromeOpions() []ExecAllocatorOption {
 	return []ExecAllocatorOption{
 		NoFirstRun,
 		NoDefaultBrowserCheck,
-		// chromedp.Headless,
+		// Headless,
 
 		Flag("disable-background-networking", true),
 		Flag("enable-features", "NetworkService,NetworkServiceInProcess"),
@@ -47,31 +48,33 @@ func main() {
 	// https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
 	opts := getChromeOpions()
 	// create context
-	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	allocCtx, cancel := NewExecAllocator(context.Background(), opts...)
 	defer cancel()
 
-	ctx, cancel := chromedp.NewContext(
+	ctx, cancel := NewContext(
 		allocCtx,
-		//chromedp.WithDebugf(log.Printf),
-		chromedp.WithErrorf(log.Printf),
+		//WithDebugf(log.Printf),
+		WithErrorf(log.Printf),
 	)
 	defer cancel()
 
 	var buf []byte
-	if err := chromedp.Run(ctx, fullScreenshot(`https://brank.as/`, 100, &buf)); err != nil {
+	if err := Run(ctx, fullScreenshot(`https://brank.as/`, 100, &buf)); err != nil {
 		log.Fatal(err)
 	}
 
 	str := base64.StdEncoding.EncodeToString(buf)
-
 	log.Printf(str)
+	for {
+		time.Sleep(2*time.Second)
+	}
 }
 
 // fullScreenshot takes a screenshot of the entire browser viewport.
 // Note: chromedp.FullScreenshot overrides the device's emulation settings. Reset
-func fullScreenshot(urlstr string, quality int, res *[]byte) chromedp.Tasks {
-	return chromedp.Tasks{
-		chromedp.Navigate(urlstr),
-		chromedp.FullScreenshot(res, quality),
+func fullScreenshot(urlstr string, quality int, res *[]byte) Tasks {
+	return Tasks{
+		Navigate(urlstr),
+		FullScreenshot(res, quality),
 	}
 }
