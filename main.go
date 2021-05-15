@@ -15,8 +15,9 @@ func getChromeOpions() []ExecAllocatorOption {
 	return []ExecAllocatorOption{
 		NoFirstRun,
 		NoDefaultBrowserCheck,
+		NoSandbox,
 		// Headless,
-
+		Flag("remote-debugging-port", "9222"),
 		Flag("disable-background-networking", true),
 		Flag("enable-features", "NetworkService,NetworkServiceInProcess"),
 		Flag("disable-background-timer-throttling", true),
@@ -39,8 +40,6 @@ func getChromeOpions() []ExecAllocatorOption {
 		Flag("enable-automation", true),
 		Flag("password-store", "basic"),
 		Flag("use-mock-keychain", true),
-		Flag("no-sandbox", true),
-		Flag("disable-setuid-sandbox", true),
 	}
 }
 
@@ -52,9 +51,8 @@ func main() {
 	defer cancel()
 
 	ctx, cancel := NewContext(
-		allocCtx,
-		//WithDebugf(log.Printf),
-		WithErrorf(log.Printf),
+		allocCtx,		
+		WithErrorf(log.Printf), //WithDebugf(log.Printf),
 	)
 	defer cancel()
 
