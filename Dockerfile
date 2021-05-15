@@ -5,6 +5,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dumb-init \
     golang
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git
 
 # Add user so we don't need --no-sandbox in Chromium
 RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
