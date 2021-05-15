@@ -141,6 +141,10 @@ type eventListener struct {
 
 func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	now := time.Now()
+	documentURL := r.DocumentURL
+	if documentURL != el.url {
+		return
+	}
 	requestID := r.RequestID
 	url := r.Request.URL
 
@@ -199,7 +203,9 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	// https://github.com/chromedp/chromedp/issues/180
 	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
 	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
-	ListenTarget(b.browserContext, func(ev interface{}) {
+	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+	ListenTarget(ctx, func(ev interface{}) {
 		switch ev.(type) {
 		case *network.EventRequestWillBeSent:
 			eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
