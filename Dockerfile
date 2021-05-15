@@ -22,7 +22,7 @@ WORKDIR /home/chrome
 # Run everything after as non-privileged user.
 USER chrome
 
-RUN export PATH=$PATH:/usr/local/go/bin
+ENV PATH=${PATH}:/usr/local/go/bin
 RUN go version
 
 COPY go.* ./
