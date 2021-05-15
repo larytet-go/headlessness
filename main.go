@@ -101,8 +101,9 @@ func New() (browser *Browser, err error) {
 	)
 
 	browser.eventListener = &eventListener{
-		requests: map[network.RequestID]*Request{},
-		urls:     map[string]struct{}{},
+		requests:  map[network.RequestID]*Request{},
+		redirects: []string{},
+		urls:      map[string]struct{}{},
 	}
 
 	// https://github.com/chromedp/chromedp/issues/679
@@ -152,9 +153,10 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 }
 
 type eventListener struct {
-	urls     map[string]struct{}
-	requests map[network.RequestID]*Request
-	mutex    sync.Mutex
+	urls      map[string]struct{}
+	redirects []string
+	requests  map[network.RequestID]*Request
+	mutex     sync.Mutex
 }
 
 func (el *eventListener) addDocumentURL(url string) {
@@ -186,6 +188,10 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 
 	if request, ok := el.requests[requestID]; ok {
 		log.Printf("Request %s already is in the map for url %s: request=%v, event=%v", url, documentURL, request, r)
+	}
+	redirectResponse := r.RedirectResponse
+	if redirectResponse != nil {
+		el.redirects = append(redirects, redirectResponse.URL)
 	}
 	el.requests[requestID] = &Request{
 		URL:       r.Request.URL,
@@ -238,6 +244,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	report.Content = base64.StdEncoding.EncodeToString([]byte(content))
 	report.Errors = errors
 	report.Requests = b.eventListener.dumpCollectedRequests()
+	report.Redirects = b.eventListener.redirects
 
 	return
 }
