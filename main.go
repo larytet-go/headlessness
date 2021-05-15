@@ -140,31 +140,37 @@ type eventListener struct {
 }
 
 func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
+	now := time.Now()
 	requestID := r.RequestID
 	url := r.Request.URL
+
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
-	if request, ok := r.requests[requestID]; ok {
+
+	if request, ok := el.requests[requestID]; ok {
 		log.Printf("Request %s already in the map for url %s", url, el.url)
 	}
-	requests[requestID] = &Request{
-		URL:       r.Request.DocumentURL,
-		TSRequest: time.time(),
+	el.requests[requestID] = &Request{
+		URL:       r.Request.URL,
+		TSRequest: now,
 	}
 }
 
 func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
+	now := time.Now()
 	requestID := r.RequestID
 	url := r.Response.URL
+
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
+
 	if request, ok := r.requests[requestID]; !ok {
 		log.Printf("Request %s already in the map for url %s", url, el.url)
 		return
 	}
-	request := requests[requestID]
+	request := el.requests[requestID]
 	request.Status = r.Status
-	request.TSResponse = time.time()
+	request.TSResponse = now
 }
 
 func (el *eventListener) dumpCollectedRequests() (requests []Request) {
