@@ -11,7 +11,17 @@ import (
 	"time"
 )
 
-func getChromeOpions() []ExecAllocatorOption {
+type contextWithCancel struct {
+	ctx context.Context
+	cancel context.CancelFunc
+}
+type Browser struct {
+	contextWithCancel execAllocator
+	contextWithCancel browserContext
+}
+
+
+func  getChromeOpions() []ExecAllocatorOption {
 	return []ExecAllocatorOption{
 		NoFirstRun,
 		NoDefaultBrowserCheck,
@@ -43,28 +53,39 @@ func getChromeOpions() []ExecAllocatorOption {
 	}
 }
 
-func main() {
+func New() (browser *Browser) {	
+	browser := &Browser{}
 	// https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
 	opts := getChromeOpions()
 	// create context
-	allocCtx, cancel := NewExecAllocator(context.Background(), opts...)
-	defer cancel()
-
-	ctx, cancel := NewContext(
-		allocCtx,		
+	browser.execAllocator.ctx, browser.execAllocator.cancel = NewExecAllocator(context.Background(), opts...)
+	browser.browserContext.ctx, browser.browserContext.cancel = NewContext(
+		allocCtx,
 		WithErrorf(log.Printf), //WithDebugf(log.Printf),
 	)
-	defer cancel()
 
+	// Load the browser the very first time
+	if err, _ := browser.report ("https://www.google.coom"); err != nil {
+		log.Fatal(err)
+	}
+	return browser
+}
+
+func (b *Browser) report(url string) (report string, err error) {
 	var buf []byte
 	if err := Run(ctx, fullScreenshot(`https://brank.as/`, 100, &buf)); err != nil {
 		log.Fatal(err)
 	}
 
 	str := base64.StdEncoding.EncodeToString(buf)
-	log.Printf(str)
+}
+
+func main() {
+	browser = New()
+	rpeort, err := browser.report()
+	log.Printf(rpeort)
 	for {
-		time.Sleep(2*time.Second)
+		time.Sleep(2 * time.Second)
 	}
 }
 
