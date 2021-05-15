@@ -5,23 +5,23 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"log"
+	"time"
 
 	. "github.com/chromedp/chromedp"
-	"time"
 )
 
 type contextWithCancel struct {
-	ctx context.Context
+	ctx    context.Context
 	cancel context.CancelFunc
 }
 type Browser struct {
-	contextWithCancel execAllocator
-	contextWithCancel browserContext
+	execAllocator  contextWithCancel
+	browserContext contextWithCancel
 }
 
-
-func  getChromeOpions() []ExecAllocatorOption {
+func getChromeOpions() []ExecAllocatorOption {
 	return []ExecAllocatorOption{
 		NoFirstRun,
 		NoDefaultBrowserCheck,
@@ -53,40 +53,20 @@ func  getChromeOpions() []ExecAllocatorOption {
 	}
 }
 
-func New() (browser *Browser) {	
-	browser := &Browser{}
+func New() (browser *Browser, err error) {
+	browser = &Browser{}
 	// https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
 	opts := getChromeOpions()
 	// create context
 	browser.execAllocator.ctx, browser.execAllocator.cancel = NewExecAllocator(context.Background(), opts...)
 	browser.browserContext.ctx, browser.browserContext.cancel = NewContext(
-		allocCtx,
+		browser.execAllocator.ctx,
 		WithErrorf(log.Printf), //WithDebugf(log.Printf),
 	)
 
 	// Load the browser the very first time
-	if err, _ := browser.report ("https://www.google.coom"); err != nil {
-		log.Fatal(err)
-	}
-	return browser
-}
-
-func (b *Browser) report(url string) (report string, err error) {
-	var buf []byte
-	if err := Run(ctx, fullScreenshot(`https://brank.as/`, 100, &buf)); err != nil {
-		log.Fatal(err)
-	}
-
-	str := base64.StdEncoding.EncodeToString(buf)
-}
-
-func main() {
-	browser = New()
-	rpeort, err := browser.report()
-	log.Printf(rpeort)
-	for {
-		time.Sleep(2 * time.Second)
-	}
+	_, err = browser.report(`https://www.google.com`)
+	return
 }
 
 // fullScreenshot takes a screenshot of the entire browser viewport.
@@ -95,5 +75,38 @@ func fullScreenshot(urlstr string, quality int, res *[]byte) Tasks {
 	return Tasks{
 		Navigate(urlstr),
 		FullScreenshot(res, quality),
+	}
+}
+
+func (b *Browser) report(url string) (report string, err error) {
+	var buf []byte
+	if err = Run(b.browserContext.ctx, fullScreenshot(url, 100, &buf)); err != nil {
+		return
+	}
+
+	report = base64.StdEncoding.EncodeToString(buf)
+	return
+}
+
+func (b *Browser) close() {
+	b.browserContext.cancel()
+	b.execAllocator.cancel()
+}
+
+func main() {
+	browser, err := New()
+	if err != nil {
+		log.Printf(err.Error())
+		return
+	}
+	report, err := browser.report(`https://www.google.com`)
+	if err != nil {
+		log.Printf(err.Error())
+		return
+	}
+	fmt.Printf("%v\n", report)
+	browser.close()
+	for {
+		time.Sleep(time.Second)
 	}
 }
