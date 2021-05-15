@@ -34,7 +34,4 @@ RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
 # Run everything after as non-privileged user.
 USER chrome
 
-# https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
 ENTRYPOINT ["dumb-init", "--", "./headlessness"]
-
-# CMD ["/path/to/your/program"]
