@@ -10,6 +10,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/dom"
+	"github.com/chromedp/cdproto/network"
 	. "github.com/chromedp/chromedp"
 )
 
@@ -91,23 +94,39 @@ func New() (browser *Browser, err error) {
 	return
 }
 
-// fullScreenshot takes a screenshot of the entire browser viewport.
-// Note: chromedp.FullScreenshot overrides the device's emulation settings. Reset
-func fullScreenshot(urlstr string, quality int, res *[]byte) Tasks {
+// Return actions scrapping a WEB page, collecting HTTP requests
+func scrapPage(urlstr string, screenshot *[]byte, content *string) Tasks {
+	quality := 50
 	return Tasks{
+		network.Enable(),
 		Navigate(urlstr),
-		FullScreenshot(res, quality),
+		FullScreenshot(screenshot, quality),
+
+		// https://github.com/chromedp/chromedp/issues/679
+
+		// https://github.com/chromedp/examples/blob/master/subtree/main.go
+		// https://github.com/chromedp/chromedp/issues/128
+		ActionFunc(func(c context.Context) (err error) {
+			*content, err = dom.GetOuterHTML().WithNodeID(cdp.NodeID(0)).Do(c)
+			if err != nil {
+				*content = fmt.Sprintf("%v", err)
+			}
+			return nil
+		}),
 	}
 }
 
 func (b *Browser) report(url string) (report *Report, err error) {
-	var buf []byte
-	if err = Run(b.browserContext.ctx, fullScreenshot(url, 100, &buf)); err != nil {
+	var screenshot []byte
+	var content string
+	if err = Run(b.browserContext.ctx, scrapPage(url, &screenshot, &content)); err != nil {
 		return
 	}
 	report = &Report{}
 	report.URL = url
-	report.Screenshot = base64.StdEncoding.EncodeToString(buf)
+	report.Screenshot = base64.StdEncoding.EncodeToString(screenshot)
+	report.Content = base64.StdEncoding.EncodeToString([]byte(content))
+
 	return
 }
 

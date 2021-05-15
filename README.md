@@ -18,3 +18,4 @@ remmina -c $PWD/local-chrome.remmina
 * https://github.com/chromedp/docker-headless-shell
 * https://pkg.go.dev/github.com/chromedp/chromedp
 * https://github.com/chromedp/chromedp/issues/128
+* https://github.com/raff/godet
