@@ -50,17 +50,16 @@ RUN apt-get install -y --no-install-recommends \
 	lsb-release \
 	xdg-utils
 
-RUN curl https://dl.google.com/go/go1.16.4.linux-amd64.tar.gz > /tmp/go1.16.4.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.16.4.linux-amd64.tar.gz
-
-
-
 # Install XVFB if there's a need to run browsers in headful mode
 RUN apt-get install -y --no-install-recommends \
     xvfb \
     x11-apps \
     x11vnc
 
+
+# Go environment
+RUN curl https://dl.google.com/go/go1.16.4.linux-amd64.tar.gz > /tmp/go1.16.4.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.16.4.linux-amd64.tar.gz
 
 WORKDIR /home/chrome
 
