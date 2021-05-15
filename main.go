@@ -122,9 +122,9 @@ func New() (browser *Browser, err error) {
 	ListenTarget(browser.execAllocator.ctx, func(ev interface{}) {
 		switch ev.(type) {
 		case *network.EventRequestWillBeSent:
-			eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
+			browser.eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
 		case *network.EventResponseReceived:
-			eventListener.responseReceived(ev.(*network.EventResponseReceived))
+			browser.eventListener.responseReceived(ev.(*network.EventResponseReceived))
 		}
 	})
 
