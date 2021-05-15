@@ -110,11 +110,8 @@ func New() (browser *Browser, err error) {
 		requests: map[network.RequestID]*Request{},
 	}
 
-	// Load the browser the very first time
-	_, err = browser.report(`https://www.google.com`)
-
 	// https://github.com/chromedp/chromedp/issues/679
-	// https://github.com/chromedp/chromedp/issues/559 <-- start here
+	// https://github.com/chromedp/chromedp/issues/559
 	// https://github.com/chromedp/chromedp/issues/180
 	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
 	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
@@ -126,6 +123,9 @@ func New() (browser *Browser, err error) {
 			browser.eventListener.responseReceived(ev.(*network.EventResponseReceived))
 		}
 	})
+
+	// Load the browser the very first time
+	_, err = browser.report(`https://www.google.com`)
 
 	return
 }
@@ -160,11 +160,11 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 }
 
 func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
-	log.Printf("requestWillBeSent ")
+	fmt.Printf("requestWillBeSent \n")
 	now := time.Now()
 	documentURL := r.DocumentURL
 	if documentURL != el.url {
-		log.Printf("requestWillBeSent documentURL %s el.url %s", documentURL, el.url)
+		fmt.Printf("requestWillBeSent documentURL %s el.url %s\n", documentURL, el.url)
 		return
 	}
 	requestID := r.RequestID
@@ -183,7 +183,7 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 }
 
 func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
-	log.Printf("responseReceived ")
+	fmt.Printf("responseReceived \n")
 	now := time.Now()
 	requestID := r.RequestID
 	url := r.Response.URL
