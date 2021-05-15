@@ -1,14 +1,15 @@
 FROM chromedp/headless-shell:latest
 
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    dumb-init \
-    golang \
-    git
+RUN apt-get update
 
 RUN apt-get install -y --no-install-recommends \
+    dumb-init \
+    golang \
+    git \
     ca-certificates \
-    curl
+    curl \
+    build-essential
+
 
 # Add user so we don't need --no-sandbox in Chromium
 RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
