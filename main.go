@@ -170,7 +170,7 @@ func (el *eventListener) removeDocumentURL(url string) {
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
 
-	delete(el.urls[url], url)
+	delete(el.urls, url)
 }
 
 func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
