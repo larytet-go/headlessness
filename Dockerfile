@@ -3,9 +3,7 @@ FROM chromedp/headless-shell:latest
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     dumb-init \
-    golang
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
+    golang \
     git
 
 # Add user so we don't need --no-sandbox in Chromium
@@ -16,6 +14,7 @@ RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
 WORKDIR /home/chrome
 
 COPY go.* ./
+RUN go get github.com/chromedp/chromedp@v0.7.2
 RUN go mod download
 RUN cat go.mod
 
