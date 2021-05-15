@@ -52,8 +52,7 @@ RUN apt-get install -y --no-install-recommends \
 	libappindicator1 \
 	libnss3 \
 	lsb-release \
-	xdg-utils\
-    wget
+	xdg-utils
 
 # Install XVFB if there's a need to run browsers in headful mode
 RUN apt-get install -y --no-install-recommends \
