@@ -23,6 +23,10 @@ type Browser struct {
 	browserContext contextWithCancel
 }
 
+type Request struct {
+	URL string
+}
+
 type Report struct {
 	URL           string    `json:"url"`
 	RequestID     string    `json:"request_id"`
@@ -34,8 +38,9 @@ type Report struct {
 	Content       string    `json:"content"`
 }
 
-func (r *Report) toJSON() string {
-	return json.Marshal(r)
+func (r *Report) toJSON() []byte {
+	s, _ := json.Marshal(r)
+	return s
 }
 
 func getChromeOpions() []ExecAllocatorOption {
@@ -100,6 +105,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	if err = Run(b.browserContext.ctx, fullScreenshot(url, 100, &buf)); err != nil {
 		return
 	}
+	report = &Report{}
 	report.URL = url
 	report.Screenshot = base64.StdEncoding.EncodeToString(buf)
 	return
@@ -122,7 +128,7 @@ func main() {
 		return
 	}
 
-	fmt.Printf("%v\n", report.toJSON())
+	fmt.Printf("%s\n", report.toJSON())
 	browser.close()
 	for {
 		time.Sleep(time.Second)
