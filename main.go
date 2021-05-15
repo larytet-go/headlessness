@@ -42,9 +42,12 @@ type Report struct {
 	Errors        string    `json:"errors"`
 }
 
-func (r *Report) toJSON() []byte {
-	s, _ := json.Marshal(r)
-	return s
+func (r *Report) toJSON(pretty bool) (s []byte) {
+	if pretty {
+		s, _ = json.MarshalIndent(r, "", "\t")
+	}
+	s, _ = json.Marshal(r)
+	return
 }
 
 func getChromeOpions() []ExecAllocatorOption {
@@ -158,7 +161,7 @@ func main() {
 		return
 	}
 
-	fmt.Printf("%s\n", report.toJSON())
+	fmt.Printf("%s\n", report.toJSON(true))
 	browser.close()
 	for {
 		time.Sleep(time.Second)
