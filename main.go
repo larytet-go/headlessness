@@ -8,9 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"time"
+	"sync"
+	. "time"
 
-	// "github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/network"
 	. "github.com/chromedp/chromedp"
@@ -27,7 +28,11 @@ type Browser struct {
 }
 
 type Request struct {
-	URL string
+	URL string `json:"url"`
+	TSRequest Time `json:"ts_request"`
+	TSResponse Time `json:"ts_respons"`
+	Status int64 `json:"status"`
+	ResponseData []byte `json:"response_data"`
 }
 
 type Report struct {
@@ -102,15 +107,11 @@ func New() (browser *Browser, err error) {
 // Return actions scrapping a WEB page, collecting HTTP requests
 func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *string) Tasks {
 	quality := 50
+
 	return Tasks{
 		network.Enable(),
 		Navigate(urlstr),
 		FullScreenshot(screenshot, quality),
-
-		// https://github.com/chromedp/chromedp/issues/679
-		// https://github.com/chromedp/chromedp/issues/559 <-- start here
-		// https://github.com/chromedp/chromedp/issues/180
-		// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
 
 		// https://github.com/chromedp/chromedp/blob/master/example_test.go
 		// https://github.com/chromedp/examples/blob/master/subtree/main.go
@@ -132,18 +133,82 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 	}
 }
 
+type eventListener struct {
+	url string
+	requests map[string]*Requests
+	mutex sync.Mutex
+}
+
+func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
+	url := r.URL
+	el.mutex.Lock()
+	defer el.mutex.Unlock()
+	if request, ok := r.requests[url];ok {
+		log.Printf("Request %s already in the map for url %s", r.url, el.url)
+	}
+	requests[url] = &Request{
+		URL: DocumentURL,
+		TSRequest: time(),
+	}
+}
+
+func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
+	url := r.URL
+	el.mutex.Lock()
+	defer el.mutex.Unlock()
+	if request, ok := r.requests[url];!ok {
+		log.Printf("Request %s already in the map for url %s", url, el.url)
+		return
+	}
+	request := requests[url]
+	request.Status = r.Status
+	request.TSResponse = time()
+}
+
+func (el *eventListener) dumpCollectedRequests() (requests []Request) {
+	requests = []Request{}
+	el.mutex.Lock()
+	defer el.mutex.Unlock()
+	for _, r := el.requests {
+		requests = append(requests, *r)
+	}
+	return
+}
+
 func (b *Browser) report(url string) (report *Report, err error) {
+
+	report = &Report{URL: url,
+		Requests: []Request{},
+    }
+
+		eventListener:= &eventListener{
+			url: url,
+			requests: map[Request]network.RequestID{},
+		}
+
+	// https://github.com/chromedp/chromedp/issues/679
+	// https://github.com/chromedp/chromedp/issues/559 <-- start here
+	// https://github.com/chromedp/chromedp/issues/180
+	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
+	chromedp.ListenTarget(b.browserContext, func(ev interface{}) {
+		switch ev.(type) {
+		case *network.EventRequestWillBeSent:
+			eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
+		case *network.EventResponseReceived:
+			eventListener.responseReceived( ev.(*network.EventResponseReceived))
+		}
+	})
+	
 	var screenshot []byte
 	var content string
 	var errors string
 	if err = Run(b.browserContext.ctx, scrapPage(url, &screenshot, &content, &errors)); err != nil {
 		return
 	}
-	report = &Report{}
-	report.URL = url
 	report.Screenshot = base64.StdEncoding.EncodeToString(screenshot)
 	report.Content = base64.StdEncoding.EncodeToString([]byte(content))
 	report.Errors = errors
+	report.Requests = eventListener.dumpCollectedRequests()
 
 	return
 }
@@ -168,6 +233,6 @@ func main() {
 	fmt.Printf("%s\n", report.toJSON(true))
 	browser.close()
 	for {
-		time.Sleep(time.Second)
+		Sleep(time.Second)
 	}
 }
