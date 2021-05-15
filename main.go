@@ -39,6 +39,7 @@ type Report struct {
 	Ads           []string  `json:"ads"`
 	Screenshot    string    `json:"screenshot"`
 	Content       string    `json:"content"`
+	Errors        string    `json:"errors"`
 }
 
 func (r *Report) toJSON() []byte {
@@ -95,7 +96,7 @@ func New() (browser *Browser, err error) {
 }
 
 // Return actions scrapping a WEB page, collecting HTTP requests
-func scrapPage(urlstr string, screenshot *[]byte, content *string) Tasks {
+func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *string) Tasks {
 	quality := 50
 	return Tasks{
 		network.Enable(),
@@ -109,7 +110,7 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string) Tasks {
 		ActionFunc(func(c context.Context) (err error) {
 			*content, err = dom.GetOuterHTML().WithNodeID(cdp.NodeID(0)).Do(c)
 			if err != nil {
-				*content = fmt.Sprintf("%v", err)
+				*errors += *errors + "\n" + err.Error()
 			}
 			return nil
 		}),
@@ -119,13 +120,15 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string) Tasks {
 func (b *Browser) report(url string) (report *Report, err error) {
 	var screenshot []byte
 	var content string
-	if err = Run(b.browserContext.ctx, scrapPage(url, &screenshot, &content)); err != nil {
+	var errors string
+	if err = Run(b.browserContext.ctx, scrapPage(url, &screenshot, &content, &errors)); err != nil {
 		return
 	}
 	report = &Report{}
 	report.URL = url
 	report.Screenshot = base64.StdEncoding.EncodeToString(screenshot)
 	report.Content = base64.StdEncoding.EncodeToString([]byte(content))
+	report.Errors = errors
 
 	return
 }
