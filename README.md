@@ -3,5 +3,5 @@
 
 ```
 docker build -t headlessness .
-docker run -rm -p 5900 --name <your-program> --init headlessness
+docker run -it --rm -p 5900 --init headlessness  /bin/bash
 ```
