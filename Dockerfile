@@ -9,10 +9,6 @@ RUN apt-get install -y --no-install-recommends \
     curl \
     build-essential
 
-RUN curl https://dl.google.com/go/go1.16.4.linux-amd64.tar.gz > /tmp/go1.16.4.linux-amd64.tar.gz && \
-    rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.16.4.linux-amd64.tar.gz
-
-
 # X11, sound
 RUN apt-get install -y --no-install-recommends \
     gconf-service \
@@ -53,6 +49,11 @@ RUN apt-get install -y --no-install-recommends \
 	libnss3 \
 	lsb-release \
 	xdg-utils
+
+RUN curl https://dl.google.com/go/go1.16.4.linux-amd64.tar.gz > /tmp/go1.16.4.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.16.4.linux-amd64.tar.gz
+
+
 
 # Install XVFB if there's a need to run browsers in headful mode
 RUN apt-get install -y --no-install-recommends \
