@@ -35,6 +35,6 @@ RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
 USER chrome
 
 # https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
-ENTRYPOINT ["dumb-init", "--", "./headlessness", "--no-sandbox", "--disable-setuid-sandbox"]
+ENTRYPOINT ["dumb-init", "--", "./headlessness"]
 
 # CMD ["/path/to/your/program"]

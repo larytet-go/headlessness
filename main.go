@@ -11,10 +11,20 @@ import (
 )
 
 func main() {
+
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.DisableGPU,
+		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-setuid-sandbox", true),
+	)
+
 	// create context
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer cancel()
+
 	ctx, cancel := chromedp.NewContext(
-		context.Background(),
-		// chromedp.WithDebugf(log.Printf),
+		allocCtx,
+		chromedp.WithDebugf(log.Printf),
 	)
 	defer cancel()
 
