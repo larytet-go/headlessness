@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"encoding/base64"
 
@@ -35,7 +34,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	str := base64.StdEncoding.EncodeToString(data)
+	str := base64.StdEncoding.EncodeToString(buf)
 
 	log.Printf(str)
 }
