@@ -10,8 +10,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/chromedp/cdproto/cdp"
-	"github.com/chromedp/cdproto/dom"
+	// "github.com/chromedp/cdproto/cdp"
+	// "github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/network"
 	. "github.com/chromedp/chromedp"
 )
@@ -105,15 +105,14 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 
 		// https://github.com/chromedp/chromedp/issues/679
 
+		// https://github.com/chromedp/chromedp/blob/master/example_test.go
 		// https://github.com/chromedp/examples/blob/master/subtree/main.go
 		// https://github.com/chromedp/chromedp/issues/128
-		ActionFunc(func(c context.Context) (err error) {
-			*content, err = dom.GetOuterHTML().WithNodeID(cdp.NodeID(0)).Do(c)
-			if err != nil {
-				*errors += *errors + "\n" + err.Error()
-			}
-			return nil
-		}),
+		// https://github.com/chromedp/chromedp/issues/370
+		// https://pkg.go.dev/github.com/chromedp/chromedp#example-package--RetrieveHTML
+		OuterHTML("#content", content),
+		//Click("#content", ByID),
+		//OuterHTML("#content", &contentAfterClick),
 	}
 }
 
