@@ -25,7 +25,8 @@ func main() {
 
 	ctx, cancel := chromedp.NewContext(
 		allocCtx,
-		chromedp.WithDebugf(log.Printf),
+		//chromedp.WithDebugf(log.Printf),
+		chromedp.WithErrorf(log.Printf),
 	)
 	defer cancel()
 
