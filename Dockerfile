@@ -13,7 +13,7 @@ RUN apt-get install -y --no-install-recommends \
     curl \
     build-essential
 
-
+# install Go and build
 RUN curl https://dl.google.com/go/go1.16.4.linux-amd64.tar.gz > /tmp/go1.16.4.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.16.4.linux-amd64.tar.gz
 
