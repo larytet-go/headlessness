@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -16,9 +17,25 @@ type contextWithCancel struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 }
+
 type Browser struct {
 	execAllocator  contextWithCancel
 	browserContext contextWithCancel
+}
+
+type Report struct {
+	URL           string    `json:"url"`
+	RequestID     string    `json:"request_id"`
+	Requests      []Request `json:"requests"`
+	Redirects     []string  `json:"redirects"`
+	SlowResponses []string  `json:"slow_responses"`
+	Ads           []string  `json:"ads"`
+	Screenshot    string    `json:"screenshot"`
+	Content       string    `json:"content"`
+}
+
+func (r *Report) toJSON() string {
+	return json.Marshal(r)
 }
 
 func getChromeOpions() []ExecAllocatorOption {
@@ -78,13 +95,13 @@ func fullScreenshot(urlstr string, quality int, res *[]byte) Tasks {
 	}
 }
 
-func (b *Browser) report(url string) (report string, err error) {
+func (b *Browser) report(url string) (report *Report, err error) {
 	var buf []byte
 	if err = Run(b.browserContext.ctx, fullScreenshot(url, 100, &buf)); err != nil {
 		return
 	}
-
-	report = base64.StdEncoding.EncodeToString(buf)
+	report.URL = url
+	report.Screenshot = base64.StdEncoding.EncodeToString(buf)
 	return
 }
 
@@ -104,7 +121,8 @@ func main() {
 		log.Printf(err.Error())
 		return
 	}
-	fmt.Printf("%v\n", report)
+
+	fmt.Printf("%v\n", report.toJSON())
 	browser.close()
 	for {
 		time.Sleep(time.Second)
