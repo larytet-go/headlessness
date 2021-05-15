@@ -191,7 +191,7 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	}
 	redirectResponse := r.RedirectResponse
 	if redirectResponse != nil {
-		el.redirects = append(redirects, redirectResponse.URL)
+		el.redirects = append(el.redirects, redirectResponse.URL)
 	}
 	el.requests[requestID] = &Request{
 		URL:       r.Request.URL,
