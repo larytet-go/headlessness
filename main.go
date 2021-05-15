@@ -23,7 +23,7 @@ type contextWithCancel struct {
 }
 
 type eventListener struct {
-	urls      map[string]struct{}
+	urls     map[string]struct{}
 	requests map[network.RequestID]*Request
 	mutex    sync.Mutex
 }
@@ -107,7 +107,7 @@ func New() (browser *Browser, err error) {
 	)
 	browser.eventListener = &eventListener{
 		requests: map[network.RequestID]*Request{},
-		urls: map[string]struct{},
+		urls:     map[string]struct{}{},
 	}
 
 	// https://github.com/chromedp/chromedp/issues/679
@@ -176,7 +176,7 @@ func (el *eventListener) removeDocumentURL(url string) {
 func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	now := time.Now()
 	documentURL := r.DocumentURL
-	if _, ok :=  el.urls[documentURL] {
+	if _, ok := el.urls[documentURL]; !ok {
 		return
 	}
 	requestID := r.RequestID
