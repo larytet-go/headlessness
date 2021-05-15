@@ -108,7 +108,7 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 		FullScreenshot(screenshot, quality),
 
 		// https://github.com/chromedp/chromedp/issues/679
-		// https://github.com/chromedp/chromedp/issues/559
+		// https://github.com/chromedp/chromedp/issues/559 <-- start here
 		// https://github.com/chromedp/chromedp/issues/180
 		// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
 
