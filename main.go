@@ -191,7 +191,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 
 	eventListener := &eventListener{
 		url:      url,
-		requests: map[Request]network.RequestID{},
+		requests: map[network.RequestID]network.RequestID{},
 	}
 
 	// https://github.com/chromedp/chromedp/issues/679
@@ -199,7 +199,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	// https://github.com/chromedp/chromedp/issues/180
 	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
 	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
-	chromedp.ListenTarget(b.browserContext, func(ev interface{}) {
+	ListenTarget(b.browserContext, func(ev interface{}) {
 		switch ev.(type) {
 		case *network.EventRequestWillBeSent:
 			eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
