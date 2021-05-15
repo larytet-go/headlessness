@@ -23,7 +23,7 @@ COPY go.* ./
 RUN go mod download
 RUN cat go.mod
 
-COPY . .
+COPY *.go .
 RUN GOOS=linux CGO_ENABLED=1 GOARCH=amd64 go build -a -o . ./
 
 # Add user so we don't need --no-sandbox in Chromium
@@ -34,5 +34,7 @@ RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
 # Run everything after as non-privileged user.
 USER chrome
 
-ENTRYPOINT ["dumb-init", "--"]
+# https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
+ENTRYPOINT ["dumb-init", "--", "./headlessness", "--no-sandbox", "--disable-setuid-sandbox"]
+
 # CMD ["/path/to/your/program"]
