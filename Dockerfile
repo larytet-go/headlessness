@@ -4,12 +4,13 @@ RUN apt-get update
 
 RUN apt-get install -y --no-install-recommends \
     dumb-init \
-    golang \
     git \
     ca-certificates \
     curl \
     build-essential
 
+RUN curl https://dl.google.com/go/go1.16.4.linux-amd64.tar.gz > /tmp/go1.16.4.linux-amd64.tar.gz && \
+    rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.16.4.linux-amd64.tar.gz
 
 # Add user so we don't need --no-sandbox in Chromium
 RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
@@ -17,6 +18,12 @@ RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
     && chown -R chrome:chrome /home/chrome
 
 WORKDIR /home/chrome
+
+# Run everything after as non-privileged user.
+USER chrome
+
+RUN export PATH=$PATH:/usr/local/go/bin
+RUN go version
 
 COPY go.* ./
 RUN go get github.com/chromedp/chromedp
@@ -26,8 +33,6 @@ RUN cat go.mod
 COPY . .
 RUN GOOS=linux CGO_ENABLED=1 GOARCH=amd64 go build -a -o /app ./
 
-# Run everything after as non-privileged user.
-USER chrome
 
 
 ENTRYPOINT ["dumb-init", "--"]
