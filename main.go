@@ -159,7 +159,7 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 	}
 }
 
-func (el *eventListener) addDocumentURL(url string) int {
+func (el *eventListener) addDocumentURL(url string) {
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
 
