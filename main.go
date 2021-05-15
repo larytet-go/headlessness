@@ -110,9 +110,7 @@ func New() (browser *Browser, err error) {
 	// https://github.com/chromedp/chromedp/issues/180
 	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
 	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
-	ctx, cancel := NewContext(context.Background())
-	defer cancel()
-	ListenTarget(ctx, func(ev interface{}) {
+	ListenTarget(browser.browserContext.ctx, func(ev interface{}) {
 		switch ev.(type) {
 		case *network.EventRequestWillBeSent:
 			browser.eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
@@ -174,7 +172,6 @@ func (el *eventListener) removeDocumentURL(url string) {
 }
 
 func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
-	fmt.Printf("requestWillBeSent\n")
 	now := time.Now()
 	documentURL := r.DocumentURL
 	requestID := r.RequestID
