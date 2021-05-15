@@ -176,14 +176,15 @@ func (el *eventListener) removeDocumentURL(url string) {
 func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	now := time.Now()
 	documentURL := r.DocumentURL
-	if _, ok := el.urls[documentURL]; !ok {
-		return
-	}
 	requestID := r.RequestID
 	url := r.Request.URL
 
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
+
+	if _, ok := el.urls[documentURL]; !ok {
+		return
+	}
 
 	if _, ok := el.requests[requestID]; ok {
 		log.Printf("Request %s already in the map for url %s", documentURL, el.url)
