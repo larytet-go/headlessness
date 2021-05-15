@@ -22,16 +22,9 @@ type contextWithCancel struct {
 	cancel context.CancelFunc
 }
 
-type eventListener struct {
-	urls     map[string]struct{}
-	requests map[network.RequestID]*Request
-	mutex    sync.Mutex
-}
-
 type Browser struct {
 	execAllocator  contextWithCancel
 	browserContext contextWithCancel
-	eventListener  *eventListener
 }
 
 type Request struct {
@@ -103,27 +96,8 @@ func New() (browser *Browser, err error) {
 	browser.execAllocator.ctx, browser.execAllocator.cancel = NewExecAllocator(context.Background(), opts...)
 	browser.browserContext.ctx, browser.browserContext.cancel = NewContext(
 		browser.execAllocator.ctx,
-		WithDebugf(log.Printf), //WithErrorf, WithDebugf
+		WithErrorf(log.Printf), //WithErrorf, WithDebugf
 	)
-	browser.eventListener = &eventListener{
-		requests: map[network.RequestID]*Request{},
-		urls:     map[string]struct{}{},
-	}
-
-	// https://github.com/chromedp/chromedp/issues/679
-	// https://github.com/chromedp/chromedp/issues/559
-	// https://github.com/chromedp/chromedp/issues/180
-	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
-	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
-	ListenTarget(browser.execAllocator.ctx, func(ev interface{}) {
-		log.Printf("requestWillBeSent ListenTarget %v\n", ev)
-		switch ev.(type) {
-		case *network.EventRequestWillBeSent:
-			browser.eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
-		case *network.EventResponseReceived:
-			browser.eventListener.responseReceived(ev.(*network.EventResponseReceived))
-		}
-	})
 
 	return
 }
@@ -155,6 +129,12 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 			return nil
 		}),
 	}
+}
+
+type eventListener struct {
+	urls     map[string]struct{}
+	requests map[network.RequestID]*Request
+	mutex    sync.Mutex
 }
 
 func (el *eventListener) addDocumentURL(url string) {
@@ -226,8 +206,29 @@ func (b *Browser) report(url string) (report *Report, err error) {
 		Requests: []Request{},
 	}
 
-	b.eventListener.addDocumentURL(url)
-	defer b.eventListener.removeDocumentURL(url)
+	eventListener := &eventListener{
+		requests: map[network.RequestID]*Request{},
+		urls:     map[string]struct{}{},
+	}
+	eventListener.addDocumentURL(url)
+	defer eventListener.removeDocumentURL(url)
+
+	// https://github.com/chromedp/chromedp/issues/679
+	// https://github.com/chromedp/chromedp/issues/559
+	// https://github.com/chromedp/chromedp/issues/180
+	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
+	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
+	ctx, cancel := NewContext(b.execAllocator.ctx) // browserContext
+	defer cancel()
+	ListenTarget(ctx, func(ev interface{}) {
+		fmt.Printf("ListenTarget %v", ev)
+		switch ev.(type) {
+		case *network.EventRequestWillBeSent:
+			eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
+		case *network.EventResponseReceived:
+			eventListener.responseReceived(ev.(*network.EventResponseReceived))
+		}
+	})
 
 	var screenshot []byte
 	var content string
@@ -238,7 +239,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	report.Screenshot = base64.StdEncoding.EncodeToString(screenshot)
 	report.Content = base64.StdEncoding.EncodeToString([]byte(content))
 	report.Errors = errors
-	report.Requests = b.eventListener.dumpCollectedRequests()
+	report.Requests = eventListener.dumpCollectedRequests()
 
 	return
 }
