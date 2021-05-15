@@ -45,8 +45,9 @@ type Report struct {
 func (r *Report) toJSON(pretty bool) (s []byte) {
 	if pretty {
 		s, _ = json.MarshalIndent(r, "", "\t")
+	} else {
+		s, _ = json.Marshal(r)
 	}
-	s, _ = json.Marshal(r)
 	return
 }
 
@@ -155,7 +156,7 @@ func main() {
 		log.Printf(err.Error())
 		return
 	}
-	report, err := browser.report(`https://www.w3schools.com/`)
+	report, err := browser.report(`https://www.w3.org/Protocols/HTTP/Performance/microscape/`)
 	if err != nil {
 		log.Printf(err.Error())
 		return
