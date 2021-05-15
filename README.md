@@ -11,3 +11,10 @@ Try VNC 127.0.0.1:5900
 ```
 remmina -c $PWD/local-chrome.remmina
 ```
+
+
+## Links
+
+* https://github.com/chromedp/docker-headless-shell
+* https://pkg.go.dev/github.com/chromedp/chromedp
+* https://github.com/chromedp/chromedp/issues/128
