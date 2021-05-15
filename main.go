@@ -11,7 +11,7 @@ import (
 	"time"
 
 	// "github.com/chromedp/cdproto/cdp"
-	// "github.com/chromedp/cdproto/dom"
+	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/network"
 	. "github.com/chromedp/chromedp"
 )
@@ -110,9 +110,18 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 		// https://github.com/chromedp/chromedp/issues/128
 		// https://github.com/chromedp/chromedp/issues/370
 		// https://pkg.go.dev/github.com/chromedp/chromedp#example-package--RetrieveHTML
-		OuterHTML("#content", content),
-		//Click("#content", ByID),
-		//OuterHTML("#content", &contentAfterClick),
+		// https://github.com/chromedp/chromedp/issues/128
+		ActionFunc(func(ctx context.Context) error {
+			node, err := dom.GetDocument().Do(ctx)
+			if err != nil {
+				return err
+			}
+			*content, err = dom.GetOuterHTML().WithNodeID(node.NodeID).Do(ctx)
+			if err != nil {
+				*errors += "Content:" + err.Error() + ". "
+			}
+			return nil
+		}),
 	}
 }
 
@@ -143,7 +152,7 @@ func main() {
 		log.Printf(err.Error())
 		return
 	}
-	report, err := browser.report(`https://www.google.com`)
+	report, err := browser.report(`https://www.w3schools.com/`)
 	if err != nil {
 		log.Printf(err.Error())
 		return
