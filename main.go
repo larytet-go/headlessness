@@ -184,8 +184,8 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 		return
 	}
 
-	if _, ok := el.requests[requestID]; ok {
-		log.Printf("Request %s already in the map for url %s", url, documentURL)
+	if request, ok := el.requests[requestID]; ok {
+		log.Printf("Request %s already is in the map for url %s, %v", url, documentURL, request)
 	}
 	el.requests[requestID] = &Request{
 		URL:       r.Request.URL,
