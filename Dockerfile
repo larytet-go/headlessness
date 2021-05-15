@@ -24,8 +24,7 @@ RUN go mod download
 RUN cat go.mod
 
 COPY . .
-RUN GOOS=linux CGO_ENABLED=1 GOARCH=amd64 go build -a -o /app ./
-
+RUN GOOS=linux CGO_ENABLED=1 GOARCH=amd64 go build -a -o . ./
 
 # Add user so we don't need --no-sandbox in Chromium
 RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
