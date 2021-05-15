@@ -151,7 +151,7 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
 
-	if request, ok := el.requests[requestID]; ok {
+	if _, ok := el.requests[requestID]; ok {
 		log.Printf("Request %s already in the map for url %s", url, el.url)
 	}
 	el.requests[requestID] = &Request{
@@ -168,7 +168,7 @@ func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
 
-	if request, ok := el.requests[requestID]; !ok {
+	if _, ok := el.requests[requestID]; !ok {
 		log.Printf("Request %s already in the map for url %s", url, el.url)
 		return
 	}
@@ -203,7 +203,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	// https://github.com/chromedp/chromedp/issues/180
 	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
 	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
-	ctx, cancel := chromedp.NewContext(context.Background())
+	ctx, cancel := NewContext(context.Background())
 	defer cancel()
 	ListenTarget(ctx, func(ev interface{}) {
 		switch ev.(type) {
