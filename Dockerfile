@@ -34,4 +34,5 @@ RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
 # Run everything after as non-privileged user.
 USER chrome
 
-ENTRYPOINT ["dumb-init", "--", "./headlessness"]
+COPY start.sh .
+ENTRYPOINT ["dumb-init", "--", "./start.sh"]
