@@ -108,6 +108,8 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 		FullScreenshot(screenshot, quality),
 
 		// https://github.com/chromedp/chromedp/issues/679
+		// https://github.com/chromedp/chromedp/issues/559
+		// https://github.com/chromedp/chromedp/issues/180
 
 		// https://github.com/chromedp/chromedp/blob/master/example_test.go
 		// https://github.com/chromedp/examples/blob/master/subtree/main.go
