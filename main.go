@@ -105,14 +105,13 @@ func New() (browser *Browser, err error) {
 		browser.execAllocator.ctx,
 		WithErrorf(log.Printf), //WithDebugf(log.Printf),
 	)
-
-	// Load the browser the very first time
-	_, err = browser.report(`https://www.google.com`)
-
 	browser.eventListener = &eventListener{
 		url:      "test",
 		requests: map[network.RequestID]*Request{},
 	}
+
+	// Load the browser the very first time
+	_, err = browser.report(`https://www.google.com`)
 
 	// https://github.com/chromedp/chromedp/issues/679
 	// https://github.com/chromedp/chromedp/issues/559 <-- start here
