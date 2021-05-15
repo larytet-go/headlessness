@@ -191,7 +191,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 
 	eventListener := &eventListener{
 		url:      url,
-		requests: map[network.RequestID]network.RequestID{},
+		requests: map[network.RequestID]*Request{},
 	}
 
 	// https://github.com/chromedp/chromedp/issues/679
