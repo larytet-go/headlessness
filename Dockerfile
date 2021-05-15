@@ -6,6 +6,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     golang \
     git
 
+RUN apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl
+
 # Add user so we don't need --no-sandbox in Chromium
 RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
     && mkdir -p /home/chrome/Downloads \
@@ -14,7 +18,7 @@ RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
 WORKDIR /home/chrome
 
 COPY go.* ./
-RUN go get github.com/chromedp/chromedp@v0.7.2
+RUN go get github.com/chromedp/chromedp
 RUN go mod download
 RUN cat go.mod
 
