@@ -103,7 +103,7 @@ func New() (browser *Browser, err error) {
 	browser.execAllocator.ctx, browser.execAllocator.cancel = NewExecAllocator(context.Background(), opts...)
 	browser.browserContext.ctx, browser.browserContext.cancel = NewContext(
 		browser.execAllocator.ctx,
-		WithLogf(log.Printf), //WithErrorf, WithDebugf
+		WithDebugf(log.Printf), //WithErrorf, WithDebugf
 	)
 	browser.eventListener = &eventListener{
 		requests: map[network.RequestID]*Request{},
