@@ -164,12 +164,12 @@ func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
 
-	if request, ok := r.requests[requestID]; !ok {
+	if request, ok := el.requests[requestID]; !ok {
 		log.Printf("Request %s already in the map for url %s", url, el.url)
 		return
 	}
 	request := el.requests[requestID]
-	request.Status = r.Status
+	request.Status = r.Response.Status
 	request.TSResponse = now
 }
 
