@@ -400,7 +400,7 @@ func (h *HTTPHandler) asyncReport(url string, transactionID string, result chan 
 	report.TransactionID = transactionID
 	report.URL = url
 	report.Elapsed = time.Since(startTime).Milliseconds()
-	log.Printf("Report is completed for %s, %d ms ", url, report.Elapsed)
+	log.Printf("Report is completed for transactionID %s url %s, %d ms ", transactionID, url, report.Elapsed)
 	result <- report
 }
 
@@ -468,11 +468,10 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	reports.Elapsed = time.Since(startTime).Milliseconds()
-	log.Printf("Report is completed for transactionID %s, URLs %v, %d ms ", transactionID, urlsDecoded, reports.Elapsed)
 
 	startTime = time.Now()
 	h.sendReport(w, reports)
-	log.Printf("Report is sent for transactionID %s, URLs %v, %d ms ", transactionID, urlsDecoded, time.Since(startTime).Milliseconds())
+	log.Printf("Report is sent for transactionID %s, URLs %v, %d ms ", transactionID, urlsDecoded, reports.Elapsed)
 }
 
 func (h *HTTPHandler) stats(w http.ResponseWriter, r *http.Request) {
