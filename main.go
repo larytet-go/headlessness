@@ -191,7 +191,7 @@ func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
 	request.TSResponse = now
 }
 
-func (el *eventListener) requestServedFromCache(r *network.EventResponseReceived) {
+func (el *eventListener) requestServedFromCache(r *network.EventRequestServedFromCache) {
 	requestID := r.RequestID
 	log.Printf("Request %s [%s] served from cache", url, requestID)
 }
