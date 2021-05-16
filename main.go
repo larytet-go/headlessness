@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -288,12 +289,17 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	urlEncoded, ok := r.URL.Query()["url"]
 	if !ok {
-		err := fmt.Errorf("URL is missing in %v", r.url.RawQuery)
+		err := fmt.Errorf("URL is missing in %v", r.URL.RawQuery)
+		h._400(w, err)
+		return
+	}
+	if len(urlEncoded) > 1 {
+		err := fmt.Errorf("Too many 'url' parameters in %v", r.URL.RawQuery)
 		h._400(w, err)
 		return
 	}
 
-	url, err := urlEncoded.QueryUnescape(encodedValue)
+	urlDecoded, err := url.QueryUnescape(urlEncoded[0])
 	if err != nil {
 		err := fmt.Errorf("Failed to decode URL %v: %v", urlEncoded, err)
 		h._400(w, err)
@@ -302,17 +308,17 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 
 	transactionID, ok := r.URL.Query()["transactionID"]
 	if !ok {
-		transactionID = ""
+		transactionID = []string{""}
 	}
 
-	report, err := browser.report(url)
+	report, err := browser.report(urlDecoded)
 	if err != nil {
-		err := fmt.Errorf("Failed to fetch URL %v: %v", url, err)
+		err := fmt.Errorf("Failed to fetch URL %v: %v", urlDecoded, err)
 		h._500(w, err)
 		return
 	}
 
-	report.TransactionID = transactionID
+	report.TransactionID = transactionID[0]
 	report.Elapsed = time.Since(startTime).Milliseconds()
 	report.URL = url
 
