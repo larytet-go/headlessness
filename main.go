@@ -315,13 +315,7 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	report.TransactionID = transactionID
 	report.Elapsed = time.Since(startTime).Milliseconds()
 
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	count, err := w.Write(report.toJSON(true)) 
-	if err != nil {
-		err := fmt.Errorf("Failed to write report for %v to the peer : %v, count=%d", url, err, count))
-		log.Printf(err.Error())
-	}
+	h._200(report.toJSON(true)) 
 }
 
 func (h *HTTPHandler) stats(w http.ResponseWriter, r *http.Request) {
