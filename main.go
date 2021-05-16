@@ -31,15 +31,18 @@ type PoolOfBrowserTabs struct {
 	mutex    sync.Mutex
 }
 
-func NewPoolOfBrowserTabs(ctx context.Context, size int) *PoolOfBrowserTabs {
-	contexts := []contextWithCancel{}
-	for i := 0; i < size; i++ {
+func NewPoolOfBrowserTabs(execAllocatorCtx context.Context, size int) *PoolOfBrowserTabs {
+	logFunc := WithErrorf(log.Printf) //WithErrorf, WithDebugf
+	browserCtx := contextWithCancel{}
+	browserCtx.ctx, browserCtx.cancel = NewContext(execAllocatorCtx, logFunc)
+	ctx := browserCtx.ctx
+
+	contexts := make([]contextWithCancel, size)
+	contexts[1] = browserCtx
+	for i := 1; i < size; i++ {
 		browserCtx := contextWithCancel{}
-		browserCtx.ctx, browserCtx.cancel = NewContext(
-			ctx,
-			WithErrorf(log.Printf), //WithErrorf, WithDebugf
-		)
-		contexts = append(contexts, browserCtx)
+		browserCtx.ctx, browserCtx.cancel = NewContext(ctx, logFunc)
+		contexts[i] = browserCtx
 	}
 	return &PoolOfBrowserTabs{
 		size:     size,
@@ -60,15 +63,15 @@ func (p *PoolOfBrowserTabs) close() {
 	p.top = 0
 }
 
-func (p *PoolOfBrowserTabs) pop() (ctx contextWithCancel, err error) {
+func (p *PoolOfBrowserTabs) pop() (ctx contextWithCancel, idx int, err error) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
 	if p.top == 0 {
-		return ctx, fmt.Errorf("Empty")
+		return ctx, 0, fmt.Errorf("Empty")
 	}
 	p.top -= 1
-	return p.contexts[p.top], nil
+	return p.contexts[p.top], p.top, nil
 }
 
 func (p *PoolOfBrowserTabs) push(ctx contextWithCancel) (err error) {
@@ -158,7 +161,7 @@ func New() (browser *Browser, err error) {
 	opts := getChromeOpions()
 	// create context
 	browser.execAllocator.ctx, browser.execAllocator.cancel = NewExecAllocator(context.Background(), opts...)
-	browser.poolOfBrowserTabs = NewPoolOfBrowserTabs(browser.execAllocator.ctx, 4)
+	browser.poolOfBrowserTabs = NewPoolOfBrowserTabs(browser.execAllocator.ctx, 12)
 
 	return
 }
@@ -283,11 +286,12 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	report = &Report{URL: url,
 		Requests: []Request{},
 	}
-	tabContext, err := b.poolOfBrowserTabs.pop()
+	tabContext, idx, err := b.poolOfBrowserTabs.pop()
 	if err != nil {
 		return report, fmt.Errorf("Too many tabs already")
 	}
 	defer b.poolOfBrowserTabs.push(tabContext)
+	log.Printf("Fetching the url %s, in the browser %d", url, idx)
 
 	eventListener := &eventListener{
 		requests:  map[network.RequestID]*Request{},
@@ -312,6 +316,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 			eventListener.responseReceived(ev.(*network.EventResponseReceived))
 		}
 	})
+	log.Printf("Connect event listener for the url %s, in the browser %d", url, idx)
 
 	var screenshot []byte
 	var content string
@@ -319,6 +324,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	if err = Run(tabContext.ctx, scrapPage(url, &screenshot, &content, &errors)); err != nil {
 		return
 	}
+	log.Printf("Fetch completed for the url %s, in the browser %d", url, idx)
 	report.Screenshot = base64.StdEncoding.EncodeToString(screenshot)
 	report.Content = base64.StdEncoding.EncodeToString([]byte(content))
 	report.Errors = errors
