@@ -349,9 +349,9 @@ func main() {
 	httpServer := http.Server{
 		Addr:           ":8081",
 		Handler:        mux,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 10,
+		ReadTimeout:    1 * time.Second,
+		WriteTimeout:   100 * time.Second,
+		MaxHeaderBytes: 1 << 28,
 	}
 	log.Fatal(httpServer.ListenAndServe())
 }
