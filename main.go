@@ -322,7 +322,7 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	report.Elapsed = time.Since(startTime).Milliseconds()
 	report.URL = urlDecoded
 
-	h.sendReport(report)
+	h.sendReport(w, report)
 }
 
 func (h *HTTPHandler) stats(w http.ResponseWriter, r *http.Request) {
