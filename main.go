@@ -3,6 +3,7 @@
 package main
 
 import (
+	"net/http"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -35,6 +36,7 @@ type Request struct {
 }
 
 type Report struct {
+	TransactionID string `json:"transaction_id"`
 	URL           string    `json:"url"`
 	RequestID     string    `json:"request_id"`
 	Requests      []Request `json:"requests"`
@@ -44,6 +46,7 @@ type Report struct {
 	Screenshot    string    `json:"screenshot"`
 	Content       string    `json:"content"`
 	Errors        string    `json:"errors"`
+	Elapsed       int   `json:"elapsed"`
 }
 
 func (r *Report) toJSON(pretty bool) (s []byte) {
@@ -253,21 +256,100 @@ func (b *Browser) close() {
 	b.execAllocator.cancel()
 }
 
+type HTTPHandler struct {
+	browser *Browser
+}
+
+func (h *HTTPHandler) _400(w http.ResponseWriter, err error) {
+	w.Header().Set("Content-Type", "text/plain")
+	log.Printf(err.Error())
+	w.WriteHeader(http.StatusBadRequest)
+	w.Write([]byte(err.Error()))
+}
+
+func (h *HTTPHandler) _500(w http.ResponseWriter, err error) {
+	w.Header().Set("Content-Type", "text/plain")
+	log.Printf(err.Error())
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Write([]byte(err.Error()))
+}
+
+func (h *HTTPHandler) _200(w http.ResponseWriter, data []byte) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	count, err := w.Write(data) 
+	if err != nil {
+		err := fmt.Errorf("Failed to write report for %v to the peer : %v, count=%d", url, err, count))
+		log.Printf(err.Error())
+	}
+}
+
+func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
+	startTime := time.time()
+	urlEncoded, ok := r.URL.Query()["url"]
+	if !ok {
+		err := fmt.Errorf("URL is missing in %v", r.url.RawQuery)
+		h._400(w, err)
+		return
+	}
+
+	url, err := urlEncoded.QueryUnescape(encodedValue)
+	if err != nil {
+		err := fmt.Errorf("Failed to decode URL %v: %v", urlEncoded, err))
+		h._400(w, err)
+		return
+	}	
+
+	transactionID, ok := r.URL.Query()["transactionID"]
+	if !ok {
+		transactionID = ""
+	}
+
+	report, err := browser.report(url)
+	if err != nil {
+		err := fmt.Errorf("Failed to fetch URL %v: %v", url, err))
+		h._500(w, err)
+		return
+	}
+
+	report.TransactionID = transactionID
+	report.Elapsed = time.Since(startTime).Milliseconds()
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	count, err := w.Write(report.toJSON(true)) 
+	if err != nil {
+		err := fmt.Errorf("Failed to write report for %v to the peer : %v, count=%d", url, err, count))
+		log.Printf(err.Error())
+	}
+}
+
+func (h *HTTPHandler) stats(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte("Ok"))
+}
+
 func main() {
 	browser, err := New()
 	if err != nil {
 		log.Printf(err.Error())
 		return
 	}
-	report, err := browser.report(`https://www.w3.org/Protocols/HTTP/Performance/microscape/`)
-	if err != nil {
-		log.Printf(err.Error())
-		return
-	}
+	httpHandler := &HTTPHandler (
+		browser: browser,
+)
 
-	fmt.Printf("%s\n", report.toJSON(true))
-	browser.close()
-	for {
-		time.Sleep(time.Second)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/report", httpHandler.report)
+	mux.HandleFunc("/stats", httpHandler.stats)
+
+	httpServer := http.Server{
+		Addr:    ":8081",
+		Handler: mux,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 10,
 	}
+	log.Fatal(httpServer.ListenAndServe())
 }
