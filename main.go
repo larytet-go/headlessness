@@ -236,12 +236,6 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	eventListener.addDocumentURL(url)
 	defer eventListener.removeDocumentURL(url)
 
-	browserContextCtx, browserContextCancel := NewContext(
-		b.browserContext.ctx,
-		WithErrorf(log.Printf), //WithErrorf, WithDebugf
-	)
-	defer browserContextCancel()
-
 	// https://github.com/chromedp/chromedp/issues/679
 	// https://github.com/chromedp/chromedp/issues/559
 	// https://github.com/chromedp/chromedp/issues/180
@@ -261,7 +255,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	var screenshot []byte
 	var content string
 	var errors string
-	if err = Run(browserContextCtx, scrapPage(url, &screenshot, &content, &errors)); err != nil {
+	if err = Run(b.browserContext.ctx, scrapPage(url, &screenshot, &content, &errors)); err != nil {
 		return
 	}
 	report.Screenshot = base64.StdEncoding.EncodeToString(screenshot)
