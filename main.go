@@ -311,7 +311,7 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 		transactionID = []string{""}
 	}
 
-	report, err := browser.report(urlDecoded)
+	report, err := h.browser.report(urlDecoded)
 	if err != nil {
 		err := fmt.Errorf("Failed to fetch URL %v: %v", urlDecoded, err)
 		h._500(w, err)
