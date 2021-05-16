@@ -34,6 +34,7 @@ type Request struct {
 	TSResponse   time.Time `json:"ts_respons"`
 	Status       int64     `json:"status"`
 	ResponseData []byte    `json:"response_data"`
+	FromCache    bool      `json:"from_cache"`
 }
 
 type Report struct {
@@ -192,8 +193,19 @@ func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
 }
 
 func (el *eventListener) requestServedFromCache(r *network.EventRequestServedFromCache) {
+	now := time.Now()
 	requestID := r.RequestID
-	log.Printf("Request %s [%s] served from cache", url, requestID)
+
+	el.mutex.Lock()
+	defer el.mutex.Unlock()
+
+	if _, ok := el.requests[requestID]; !ok {
+		log.Printf("Request [%s] is missing in the map (served from cache)", requestID)
+		return
+	}
+	request := el.requests[requestID]
+	request.FromCache = true
+	request.TSResponse = now
 }
 
 func (el *eventListener) dumpCollectedRequests() (requests []Request) {
