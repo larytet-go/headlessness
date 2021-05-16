@@ -122,6 +122,23 @@ func (r *Report) toJSON(pretty bool) (s []byte) {
 	return
 }
 
+type Reports struct {
+	Count         int       `json:"total"`
+	URLReports    []*Report `json:"reports"`
+	Elapsed       int64     `json:"elapsed"`
+	TransactionID string    `json:"transaction_id"`
+	URLs          []string  `json:"urls"`
+}
+
+func (r *Reports) toJSON(pretty bool) (s []byte) {
+	if pretty {
+		s, _ = json.MarshalIndent(r, "", "\t")
+	} else {
+		s, _ = json.Marshal(r)
+	}
+	return
+}
+
 func getChromeOpions() []ExecAllocatorOption {
 	return []ExecAllocatorOption{
 		NoFirstRun,
@@ -361,56 +378,101 @@ func (h *HTTPHandler) _500(w http.ResponseWriter, err error) {
 	w.Write([]byte(err.Error()))
 }
 
-func (h *HTTPHandler) sendReport(w http.ResponseWriter, report *Report) {
+func (h *HTTPHandler) sendReport(w http.ResponseWriter, reports *Reports) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	count, err := w.Write(report.toJSON(true))
+	count, err := w.Write(reports.toJSON(true))
 	if err != nil {
-		err := fmt.Errorf("Failed to write report for %v to the peer : %v, count=%d", report.URL, err, count)
+		err := fmt.Errorf("Failed to write report for transactionID=%s url=%v to the peer : %v, count=%d", reports.TransactionID, reports.URLs, err, count)
 		log.Printf(err.Error())
 	}
 }
 
+func (h *HTTPHandler) asyncReport(url string, transactionID string, result chan *Report) {
+	startTime := time.Now()
+	report, err := h.browser.report(url)
+	if err != nil {
+		err := fmt.Errorf("Failed to fetch URL %v: %v", url, err)
+		log.Printf(err.Error())
+		report.Errors += err.Error() + "."
+	}
+
+	report.TransactionID = transactionID
+	report.URL = url
+	report.Elapsed = time.Since(startTime).Milliseconds()
+	log.Printf("Report is completed for %s, %d ms ", url, report.Elapsed)
+	result <- report
+}
+
+func (h *HTTPHandler) asyncReports(urls []string, transactionID string) (reports *Reports, err error) {
+	urlsCount := len(urls)
+	reportsCh := make(chan *Report, urlsCount)
+
+	for _, url := range urls {
+		go h.asyncReport(url, transactionID, reportsCh)
+	}
+
+	reports = &Reports{
+		Count:         urlsCount,
+		URLReports:    make([]*Report, urlsCount),
+		TransactionID: transactionID,
+		URLs:          urls,
+	}
+
+	for i := 0; i < urlsCount; i++ {
+		report := <-reportsCh
+		reports.URLReports[i] = report
+	}
+
+	close(reportsCh)
+	return
+}
+
 func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
-	urlEncoded, ok := r.URL.Query()["url"]
+	urlsEncoded, ok := r.URL.Query()["url"]
 	if !ok {
 		err := fmt.Errorf("URL is missing in %v", r.URL.RawQuery)
 		h._400(w, err)
 		return
 	}
-	if len(urlEncoded) > 1 {
-		err := fmt.Errorf("Too many 'url' parameters in %v", r.URL.RawQuery)
+	maxURLs := h.browser.poolOfBrowserTabs.size
+	urlsCount := len(urlsEncoded)
+	if urlsCount > maxURLs {
+		err := fmt.Errorf("Too many 'url' parameters in %v, max is %d", r.URL.RawQuery, maxURLs)
 		h._400(w, err)
 		return
 	}
 
-	urlDecoded, err := url.QueryUnescape(urlEncoded[0])
-	if err != nil {
-		err := fmt.Errorf("Failed to decode URL %v: %v", urlEncoded, err)
-		h._400(w, err)
-		return
+	urlsDecoded := make([]string, urlsCount)
+	for i, urlEncoded := range urlsEncoded {
+		urlDecoded, err := url.QueryUnescape(urlEncoded)
+		if err != nil {
+			err := fmt.Errorf("Failed to decode URL %v: %v", urlEncoded, err)
+			h._400(w, err)
+			return
+		}
+		urlsDecoded[i] = urlDecoded
 	}
 
-	transactionID, ok := r.URL.Query()["transactionID"]
+	transactionsID, ok := r.URL.Query()["transaction_id"]
 	if !ok {
-		transactionID = []string{""}
+		transactionsID = []string{""}
 	}
+	transactionID := transactionsID[0]
 
-	report, err := h.browser.report(urlDecoded)
+	reports, err := h.asyncReports(urlsDecoded, transactionID)
 	if err != nil {
-		err := fmt.Errorf("Failed to fetch URL %v: %v", urlDecoded, err)
+		err := fmt.Errorf("Failed to fetch transactionID %s, URLs %v: %v", transactionID, urlsDecoded, err)
 		h._500(w, err)
 		return
 	}
+	reports.Elapsed = time.Since(startTime).Milliseconds()
+	log.Printf("Report is completed for transactionID %s, URLs %v, %d ms ", transactionID, urlsDecoded, reports.Elapsed)
 
-	report.TransactionID = transactionID[0]
-	report.Elapsed = time.Since(startTime).Milliseconds()
-	report.URL = urlDecoded
-	log.Printf("Report is completed for %s, %d ms ", urlDecoded, report.Elapsed)
-
-	h.sendReport(w, report)
-	log.Printf("Report is sent for %s, %d ms ", urlDecoded, report.Elapsed)
+	startTime = time.Now()
+	h.sendReport(w, reports)
+	log.Printf("Report is sent for transactionID %s, URLs %v, %d ms ", transactionID, urlsDecoded, time.Since(startTime).Milliseconds())
 }
 
 func (h *HTTPHandler) stats(w http.ResponseWriter, r *http.Request) {
