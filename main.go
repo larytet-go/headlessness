@@ -3,12 +3,12 @@
 package main
 
 import (
-	"net/http"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
@@ -36,7 +36,7 @@ type Request struct {
 }
 
 type Report struct {
-	TransactionID string `json:"transaction_id"`
+	TransactionID string    `json:"transaction_id"`
 	URL           string    `json:"url"`
 	RequestID     string    `json:"request_id"`
 	Requests      []Request `json:"requests"`
@@ -46,7 +46,7 @@ type Report struct {
 	Screenshot    string    `json:"screenshot"`
 	Content       string    `json:"content"`
 	Errors        string    `json:"errors"`
-	Elapsed       int   `json:"elapsed"`
+	Elapsed       int       `json:"elapsed"`
 }
 
 func (r *Report) toJSON(pretty bool) (s []byte) {
@@ -277,9 +277,9 @@ func (h *HTTPHandler) _500(w http.ResponseWriter, err error) {
 func (h *HTTPHandler) _200(w http.ResponseWriter, data []byte) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	count, err := w.Write(data) 
+	count, err := w.Write(data)
 	if err != nil {
-		err := fmt.Errorf("Failed to write report for %v to the peer : %v, count=%d", url, err, count))
+		err := fmt.Errorf("Failed to write report for %v to the peer : %v, count=%d", url, err, count)
 		log.Printf(err.Error())
 	}
 }
@@ -295,10 +295,10 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 
 	url, err := urlEncoded.QueryUnescape(encodedValue)
 	if err != nil {
-		err := fmt.Errorf("Failed to decode URL %v: %v", urlEncoded, err))
+		err := fmt.Errorf("Failed to decode URL %v: %v", urlEncoded, err)
 		h._400(w, err)
 		return
-	}	
+	}
 
 	transactionID, ok := r.URL.Query()["transactionID"]
 	if !ok {
@@ -307,7 +307,7 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 
 	report, err := browser.report(url)
 	if err != nil {
-		err := fmt.Errorf("Failed to fetch URL %v: %v", url, err))
+		err := fmt.Errorf("Failed to fetch URL %v: %v", url, err)
 		h._500(w, err)
 		return
 	}
@@ -315,7 +315,7 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	report.TransactionID = transactionID
 	report.Elapsed = time.Since(startTime).Milliseconds()
 
-	h._200(report.toJSON(true)) 
+	h._200(report.toJSON(true))
 }
 
 func (h *HTTPHandler) stats(w http.ResponseWriter, r *http.Request) {
@@ -330,17 +330,18 @@ func main() {
 		log.Printf(err.Error())
 		return
 	}
-	httpHandler := &HTTPHandler (
+
+	httpHandler := &HTTPHandler{
 		browser: browser,
-)
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/report", httpHandler.report)
 	mux.HandleFunc("/stats", httpHandler.stats)
 
 	httpServer := http.Server{
-		Addr:    ":8081",
-		Handler: mux,
+		Addr:           ":8081",
+		Handler:        mux,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 10,
