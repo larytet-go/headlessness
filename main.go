@@ -171,7 +171,7 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	if redirectResponse != nil {
 		el.redirects = append(el.redirects, redirectResponse.URL)
 	}
-	log.Printf("Add request %s [%s]", url, requestID)
+	// log.Printf("Add request %s [%s]", url, requestID)
 	el.requests[requestID] = &Request{
 		URL:       r.Request.URL,
 		TSRequest: now,
@@ -322,6 +322,7 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	report.TransactionID = transactionID[0]
 	report.Elapsed = time.Since(startTime).Milliseconds()
 	report.URL = urlDecoded
+	log.Printf("Report is completed for %s, %d ms ", urlDecoded, report.Elapsed)
 
 	h.sendReport(w, report)
 }
