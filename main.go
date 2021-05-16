@@ -66,7 +66,7 @@ func (p *PoolOfBrowserTabs) pop() (ctx contextWithCancel, err error) {
 	defer p.mutex.Unlock()
 
 	if p.top == 0 {
-		return ctx, 0, fmt.Errorf("Empty")
+		return ctx, fmt.Errorf("Empty")
 	}
 	p.top -= 1
 	return p.contexts[p.top], nil
