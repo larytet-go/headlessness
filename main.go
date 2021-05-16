@@ -49,32 +49,38 @@ func NewPoolOfBrowserTabs(ctx context.Context, size int) *PoolOfBrowserTabs {
 }
 
 func (p *PoolOfBrowserTabs) close() {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	for i := 0; i < p.top; i++ {
 		ctx := p.contexts[i]
 		ctx.cancel()
 	}
+	p.size = 0
+	p.top = 0
 }
 
 func (p *PoolOfBrowserTabs) pop() (ctx contextWithCancel, err error) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	if top == 0 {
+	if p.top == 0 {
 		return ctx, fmt.Errorf("Empty")
 	}
-	top -= 1
-	return p.contexts[top], nil
+	p.top -= 1
+	return p.contexts[p.top], nil
 }
 
 func (p *PoolOfBrowserTabs) push(ctx contextWithCancel) (err error) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	if top == size {
+	if p.top == p.size {
 		return fmt.Errorf("Full")
 	}
-	p.contexts[top] = ctx
-	top += 1
+	p.contexts[p.top] = ctx
+	p.top += 1
+	return
 }
 
 type Browser struct {
@@ -281,7 +287,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	if err != nil {
 		return report, fmt.Errorf("Too many tabs already")
 	}
-	defer b.push(tabContext)
+	defer b.poolOfBrowserTabs.push(tabContext)
 
 	eventListener := &eventListener{
 		requests:  map[network.RequestID]*Request{},
@@ -296,7 +302,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	// https://github.com/chromedp/chromedp/issues/180
 	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
 	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
-	ListenTarget(tabContext, func(ev interface{}) {
+	ListenTarget(tabContext.ctx, func(ev interface{}) {
 		switch ev.(type) {
 		case *network.EventRequestServedFromCache:
 			eventListener.requestServedFromCache(ev.(*network.EventRequestServedFromCache))
@@ -310,7 +316,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	var screenshot []byte
 	var content string
 	var errors string
-	if err = Run(tabContext, scrapPage(url, &screenshot, &content, &errors)); err != nil {
+	if err = Run(tabContext.ctx, scrapPage(url, &screenshot, &content, &errors)); err != nil {
 		return
 	}
 	report.Screenshot = base64.StdEncoding.EncodeToString(screenshot)
@@ -323,7 +329,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 }
 
 func (b *Browser) close() {
-	b.PoolOfBrowserTabs.cancel()
+	b.poolOfBrowserTabs.cancel()
 	b.execAllocator.cancel()
 }
 
