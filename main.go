@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/chromedp/cdproto/dom"
+	// "github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/network"
 	//"github.com/chromedp/cdproto/page"
 	. "github.com/chromedp/chromedp"
@@ -31,17 +31,14 @@ type PoolOfBrowserTabs struct {
 	mutex    sync.Mutex
 }
 
-func NewPoolOfBrowserTabs(execAllocatorCtx context.Context, size int) *PoolOfBrowserTabs {
-	logFunc := WithErrorf(log.Printf) //WithErrorf, WithDebugf
-	browserCtx := contextWithCancel{}
-	browserCtx.ctx, browserCtx.cancel = NewContext(execAllocatorCtx, logFunc)
-	ctx := browserCtx.ctx
-
+func NewPoolOfBrowserTabs(ctx context.Context, size int) *PoolOfBrowserTabs {
 	contexts := make([]contextWithCancel, size)
-	contexts[1] = browserCtx
-	for i := 1; i < size; i++ {
+	for i := 0; i < size; i++ {
 		browserCtx := contextWithCancel{}
-		browserCtx.ctx, browserCtx.cancel = NewContext(ctx, logFunc)
+		browserCtx.ctx, browserCtx.cancel = NewContext(
+			ctx,
+			WithErrorf(log.Printf), //WithErrorf, WithDebugf
+		)
 		contexts[i] = browserCtx
 	}
 	return &PoolOfBrowserTabs{
@@ -175,23 +172,25 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 		Navigate(urlstr),
 		FullScreenshot(screenshot, quality),
 
-		// https://github.com/chromedp/chromedp/blob/master/example_test.go
-		// https://github.com/chromedp/examples/blob/master/subtree/main.go
-		// https://github.com/chromedp/chromedp/issues/128
-		// https://github.com/chromedp/chromedp/issues/370
-		// https://pkg.go.dev/github.com/chromedp/chromedp#example-package--RetrieveHTML
-		// https://github.com/chromedp/chromedp/issues/128
-		ActionFunc(func(ctx context.Context) error {
-			node, err := dom.GetDocument().Do(ctx)
-			if err != nil {
-				return err
-			}
-			*content, err = dom.GetOuterHTML().WithNodeID(node.NodeID).Do(ctx)
-			if err != nil {
-				*errors += "Content:" + err.Error() + ". "
-			}
-			return nil
-		}),
+		/*
+			// https://github.com/chromedp/chromedp/blob/master/example_test.go
+			// https://github.com/chromedp/examples/blob/master/subtree/main.go
+			// https://github.com/chromedp/chromedp/issues/128
+			// https://github.com/chromedp/chromedp/issues/370
+			// https://pkg.go.dev/github.com/chromedp/chromedp#example-package--RetrieveHTML
+			// https://github.com/chromedp/chromedp/issues/128
+			ActionFunc(func(ctx context.Context) error {
+				node, err := dom.GetDocument().Do(ctx)
+				if err != nil {
+					return err
+				}
+				*content, err = dom.GetOuterHTML().WithNodeID(node.NodeID).Do(ctx)
+				if err != nil {
+					*errors += "Content:" + err.Error() + ". "
+				}
+				return nil
+			}),
+		*/
 	}
 }
 
@@ -306,16 +305,18 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	// https://github.com/chromedp/chromedp/issues/180
 	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
 	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
-	ListenTarget(tabContext.ctx, func(ev interface{}) {
-		switch ev.(type) {
-		case *network.EventRequestServedFromCache:
-			eventListener.requestServedFromCache(ev.(*network.EventRequestServedFromCache))
-		case *network.EventRequestWillBeSent:
-			eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
-		case *network.EventResponseReceived:
-			eventListener.responseReceived(ev.(*network.EventResponseReceived))
-		}
-	})
+	/*
+		ListenTarget(tabContext.ctx, func(ev interface{}) {
+			switch ev.(type) {
+			case *network.EventRequestServedFromCache:
+				eventListener.requestServedFromCache(ev.(*network.EventRequestServedFromCache))
+			case *network.EventRequestWillBeSent:
+				eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
+			case *network.EventResponseReceived:
+				eventListener.responseReceived(ev.(*network.EventResponseReceived))
+			}
+		})
+	*/
 	log.Printf("Connect event listener for the url %s, in the browser %d", url, idx)
 
 	var screenshot []byte
@@ -437,4 +438,44 @@ func main() {
 		MaxHeaderBytes: 1 << 28,
 	}
 	log.Fatal(httpServer.ListenAndServe())
+}
+
+func _main() {
+	opts := getChromeOpions()
+
+	// new browser, first tab
+	browserCtx, browserCancel := NewExecAllocator(context.Background(), opts...)
+	defer browserCancel()
+
+	ctx1, cancel := NewContext(browserCtx)
+	defer cancel()
+
+	// ensure the first tab is created
+	if err := Run(ctx1, Tasks{
+		network.Enable(),
+		Navigate("https://www.google.com"),
+	}); err != nil {
+		log.Fatal(err)
+	}
+
+	// same browser, second tab
+	ctx2, _ := NewContext(ctx1)
+
+	// ensure the second tab is created
+	if err := Run(ctx2, Tasks{
+		network.Enable(),
+		Navigate("https://www.google.com"),
+	}); err != nil {
+		log.Fatal(err)
+	}
+
+	c1 := FromContext(ctx1)
+	c2 := FromContext(ctx2)
+
+	fmt.Printf("Same browser: %t\n", c1.Browser == c2.Browser)
+	fmt.Printf("Same tab: %v %v %t\n", c1.Target, c2.Target, c1.Target == c2.Target)
+
+	// Output:
+	// Same browser: true
+	// Same tab: false
 }
