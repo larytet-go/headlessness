@@ -343,7 +343,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/report", httpHandler.report)
+	mux.HandleFunc("/fetch", httpHandler.report)
 	mux.HandleFunc("/stats", httpHandler.stats)
 
 	httpServer := http.Server{
