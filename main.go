@@ -36,9 +36,8 @@ type Request struct {
 }
 
 type Report struct {
-	URL           string
-	TransactionID string    `json:"transaction_id"`
 	URL           string    `json:"url"`
+	TransactionID string    `json:"transaction_id"`
 	RequestID     string    `json:"request_id"`
 	Requests      []Request `json:"requests"`
 	Redirects     []string  `json:"redirects"`
@@ -286,7 +285,7 @@ func (h *HTTPHandler) sendReport(w http.ResponseWriter, report Report) {
 }
 
 func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
-	startTime := time.time()
+	startTime := time.Now()
 	urlEncoded, ok := r.URL.Query()["url"]
 	if !ok {
 		err := fmt.Errorf("URL is missing in %v", r.url.RawQuery)
