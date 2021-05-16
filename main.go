@@ -275,7 +275,7 @@ func (h *HTTPHandler) _500(w http.ResponseWriter, err error) {
 	w.Write([]byte(err.Error()))
 }
 
-func (h *HTTPHandler) sendReport(w http.ResponseWriter, report Report) {
+func (h *HTTPHandler) sendReport(w http.ResponseWriter, report *Report) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	count, err := w.Write(report.toJSON(true))
