@@ -166,7 +166,7 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 
 	redirectResponse := r.RedirectResponse
 	if request, ok := el.requests[requestID]; ok && redirectResponse == nil {
-		log.Printf("Request %s already is in the map for url %s: request=%v, event=%v", url, documentURL, request, r)
+		log.Printf("Request %s [%s]  already is in the map for url %s: request=%v, event=%v", url, requestID, documentURL, request, r)
 	}
 	if redirectResponse != nil {
 		el.redirects = append(el.redirects, redirectResponse.URL)
@@ -186,7 +186,7 @@ func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
 	defer el.mutex.Unlock()
 
 	if _, ok := el.requests[requestID]; !ok {
-		log.Printf("Request %s is missing in the map", url)
+		log.Printf("Request %s [%s] is missing in the map", url, requestID)
 		return
 	}
 	request := el.requests[requestID]
