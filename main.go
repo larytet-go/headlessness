@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
@@ -300,7 +301,7 @@ func (el *eventListener) dumpCollectedRequests() (requests []Request) {
 	return
 }
 
-func (b *Browser) report(url string) (report *Report, err error) {
+func (b *Browser) report(url string, deadline time.Duration) (report *Report, err error) {
 	report = &Report{URL: url,
 		Requests: []Request{},
 	}
@@ -388,9 +389,9 @@ func (h *HTTPHandler) sendReport(w http.ResponseWriter, reports *Reports) {
 	}
 }
 
-func (h *HTTPHandler) asyncReport(url string, transactionID string, result chan *Report) {
+func (h *HTTPHandler) asyncReport(url string, transactionID string, result chan *Report, deadline time.Duration) {
 	startTime := time.Now()
-	report, err := h.browser.report(url)
+	report, err := h.browser.report(url, deadline)
 	if err != nil {
 		err := fmt.Errorf("Failed to fetch URL %v: %v", url, err)
 		log.Printf(err.Error())
@@ -404,12 +405,12 @@ func (h *HTTPHandler) asyncReport(url string, transactionID string, result chan 
 	result <- report
 }
 
-func (h *HTTPHandler) asyncReports(urls []string, transactionID string) (reports *Reports, err error) {
+func (h *HTTPHandler) asyncReports(urls []string, transactionID string, deadline time.Duration) (reports *Reports, err error) {
 	urlsCount := len(urls)
 	reportsCh := make(chan *Report, urlsCount)
 
 	for _, url := range urls {
-		go h.asyncReport(url, transactionID, reportsCh)
+		go h.asyncReport(url, transactionID, reportsCh, deadline)
 	}
 
 	reports = &Reports{
@@ -426,6 +427,26 @@ func (h *HTTPHandler) asyncReports(urls []string, transactionID string) (reports
 
 	close(reportsCh)
 	return
+}
+func getDeadline(r *http.Request) time.Duration {
+	deadlines, ok := r.URL.Query()["deadlines"]
+	if !ok {
+		deadlines = []string{"5000"}
+	}
+	deadline, err := strconv.Atoi(deadlines[0])
+	if err != nil {
+		deadline = 5000
+	}
+	return time.Duration(deadline) * time.Millisecond
+}
+
+func getTransactionID(r *http.Request) string {
+	transactionsID, ok := r.URL.Query()["transaction_id"]
+	if !ok {
+		transactionsID = []string{""}
+	}
+	transactionID := transactionsID[0]
+	return transactionID
 }
 
 func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
@@ -455,13 +476,10 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 		urlsDecoded[i] = urlDecoded
 	}
 
-	transactionsID, ok := r.URL.Query()["transaction_id"]
-	if !ok {
-		transactionsID = []string{""}
-	}
-	transactionID := transactionsID[0]
+	transactionID := getTransactionID(r)
+	deadline := getDeadline(r)
 
-	reports, err := h.asyncReports(urlsDecoded, transactionID)
+	reports, err := h.asyncReports(urlsDecoded, transactionID, deadline)
 	if err != nil {
 		err := fmt.Errorf("Failed to fetch transactionID %s, URLs %v: %v", transactionID, urlsDecoded, err)
 		h._500(w, err)
