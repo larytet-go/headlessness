@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	// "github.com/chromedp/cdproto/dom"
+	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/network"
 	//"github.com/chromedp/cdproto/page"
 	. "github.com/chromedp/chromedp"
@@ -31,14 +31,15 @@ type PoolOfBrowserTabs struct {
 	mutex    sync.Mutex
 }
 
-func NewPoolOfBrowserTabs(ctx context.Context, size int) *PoolOfBrowserTabs {
+func NewPoolOfBrowserTabs(size int) *PoolOfBrowserTabs {
 	contexts := make([]contextWithCancel, size)
+
+	// https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
+	opts := getChromeOpions()
+
 	for i := 0; i < size; i++ {
 		browserCtx := contextWithCancel{}
-		browserCtx.ctx, browserCtx.cancel = NewContext(
-			ctx,
-			WithErrorf(log.Printf), //WithErrorf, WithDebugf
-		)
+		browserCtx.ctx, browserCtx.cancel = NewExecAllocator(context.Background(), opts...)
 		contexts[i] = browserCtx
 	}
 	return &PoolOfBrowserTabs{
@@ -60,7 +61,7 @@ func (p *PoolOfBrowserTabs) close() {
 	p.top = 0
 }
 
-func (p *PoolOfBrowserTabs) pop() (ctx contextWithCancel, idx int, err error) {
+func (p *PoolOfBrowserTabs) pop() (ctx contextWithCancel, err error) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -68,7 +69,7 @@ func (p *PoolOfBrowserTabs) pop() (ctx contextWithCancel, idx int, err error) {
 		return ctx, 0, fmt.Errorf("Empty")
 	}
 	p.top -= 1
-	return p.contexts[p.top], p.top, nil
+	return p.contexts[p.top], nil
 }
 
 func (p *PoolOfBrowserTabs) push(ctx contextWithCancel) (err error) {
@@ -84,7 +85,6 @@ func (p *PoolOfBrowserTabs) push(ctx contextWithCancel) (err error) {
 }
 
 type Browser struct {
-	execAllocator     contextWithCancel
 	poolOfBrowserTabs *PoolOfBrowserTabs
 }
 
@@ -154,11 +154,8 @@ func getChromeOpions() []ExecAllocatorOption {
 
 func New() (browser *Browser, err error) {
 	browser = &Browser{}
-	// https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
-	opts := getChromeOpions()
-	// create context
-	browser.execAllocator.ctx, browser.execAllocator.cancel = NewExecAllocator(context.Background(), opts...)
-	browser.poolOfBrowserTabs = NewPoolOfBrowserTabs(browser.execAllocator.ctx, 12)
+	// create contexts
+	browser.poolOfBrowserTabs = NewPoolOfBrowserTabs(12)
 
 	return
 }
@@ -172,25 +169,23 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 		Navigate(urlstr),
 		FullScreenshot(screenshot, quality),
 
-		/*
-			// https://github.com/chromedp/chromedp/blob/master/example_test.go
-			// https://github.com/chromedp/examples/blob/master/subtree/main.go
-			// https://github.com/chromedp/chromedp/issues/128
-			// https://github.com/chromedp/chromedp/issues/370
-			// https://pkg.go.dev/github.com/chromedp/chromedp#example-package--RetrieveHTML
-			// https://github.com/chromedp/chromedp/issues/128
-			ActionFunc(func(ctx context.Context) error {
-				node, err := dom.GetDocument().Do(ctx)
-				if err != nil {
-					return err
-				}
-				*content, err = dom.GetOuterHTML().WithNodeID(node.NodeID).Do(ctx)
-				if err != nil {
-					*errors += "Content:" + err.Error() + ". "
-				}
-				return nil
-			}),
-		*/
+		// https://github.com/chromedp/chromedp/blob/master/example_test.go
+		// https://github.com/chromedp/examples/blob/master/subtree/main.go
+		// https://github.com/chromedp/chromedp/issues/128
+		// https://github.com/chromedp/chromedp/issues/370
+		// https://pkg.go.dev/github.com/chromedp/chromedp#example-package--RetrieveHTML
+		// https://github.com/chromedp/chromedp/issues/128
+		ActionFunc(func(ctx context.Context) error {
+			node, err := dom.GetDocument().Do(ctx)
+			if err != nil {
+				return err
+			}
+			*content, err = dom.GetOuterHTML().WithNodeID(node.NodeID).Do(ctx)
+			if err != nil {
+				*errors += "Content:" + err.Error() + ". "
+			}
+			return nil
+		}),
 	}
 }
 
@@ -285,11 +280,19 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	report = &Report{URL: url,
 		Requests: []Request{},
 	}
-	tabContext, idx, err := b.poolOfBrowserTabs.pop()
+	browserContext, err := b.poolOfBrowserTabs.pop()
 	if err != nil {
 		return report, fmt.Errorf("Too many tabs already")
 	}
-	defer b.poolOfBrowserTabs.push(tabContext)
+	defer b.poolOfBrowserTabs.push(browserContext)
+
+	tabContext := contextWithCancel{}
+	tabContext.ctx, tabContext.cancel = NewContext(
+		browserContext.ctx,
+		WithErrorf(log.Printf), //WithErrorf, WithDebugf
+	)
+	defer tabContext.cancel()
+
 	log.Printf("Fetching the url %s, in the browser %d", url, idx)
 
 	eventListener := &eventListener{
@@ -297,26 +300,24 @@ func (b *Browser) report(url string) (report *Report, err error) {
 		redirects: []string{},
 		urls:      map[string]struct{}{},
 	}
-	eventListener.addDocumentURL(url)
 	defer eventListener.removeDocumentURL(url)
+	eventListener.addDocumentURL(url)
 
 	// https://github.com/chromedp/chromedp/issues/679
 	// https://github.com/chromedp/chromedp/issues/559
 	// https://github.com/chromedp/chromedp/issues/180
 	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
 	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
-	/*
-		ListenTarget(tabContext.ctx, func(ev interface{}) {
-			switch ev.(type) {
-			case *network.EventRequestServedFromCache:
-				eventListener.requestServedFromCache(ev.(*network.EventRequestServedFromCache))
-			case *network.EventRequestWillBeSent:
-				eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
-			case *network.EventResponseReceived:
-				eventListener.responseReceived(ev.(*network.EventResponseReceived))
-			}
-		})
-	*/
+	ListenTarget(tabContext.ctx, func(ev interface{}) {
+		switch ev.(type) {
+		case *network.EventRequestServedFromCache:
+			eventListener.requestServedFromCache(ev.(*network.EventRequestServedFromCache))
+		case *network.EventRequestWillBeSent:
+			eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
+		case *network.EventResponseReceived:
+			eventListener.responseReceived(ev.(*network.EventResponseReceived))
+		}
+	})
 	log.Printf("Connect event listener for the url %s, in the browser %d", url, idx)
 
 	var screenshot []byte
@@ -337,7 +338,6 @@ func (b *Browser) report(url string) (report *Report, err error) {
 
 func (b *Browser) close() {
 	b.poolOfBrowserTabs.close()
-	b.execAllocator.cancel()
 }
 
 type HTTPHandler struct {
