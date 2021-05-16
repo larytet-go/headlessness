@@ -160,10 +160,6 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
 
-	if _, ok := el.urls[documentURL]; !ok {
-		return
-	}
-
 	redirectResponse := r.RedirectResponse
 	if request, ok := el.requests[requestID]; ok && redirectResponse == nil {
 		log.Printf("Request %s [%s]  already is in the map for url %s: request=%v, event=%v", url, requestID, documentURL, request, r)
@@ -193,6 +189,11 @@ func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
 	request := el.requests[requestID]
 	request.Status = r.Response.Status
 	request.TSResponse = now
+}
+
+func (el *eventListener) requestServedFromCache(r *network.EventResponseReceived) {
+	requestID := r.RequestID
+	log.Printf("Request %s [%s] served from cache", url, requestID)
 }
 
 func (el *eventListener) dumpCollectedRequests() (requests []Request) {
@@ -231,6 +232,8 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
 	ListenTarget(browserContextCtx, func(ev interface{}) {
 		switch ev.(type) {
+		case *network.EventRequestServedFromCache:
+			eventListener.requestServedFromCache(ev.(*network.EventRequestServedFromCache))
 		case *network.EventRequestWillBeSent:
 			eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
 		case *network.EventResponseReceived:
