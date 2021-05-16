@@ -293,7 +293,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	)
 	defer tabContext.cancel()
 
-	log.Printf("Fetching the url %s, in the browser %d", url, idx)
+	log.Printf("Fetching the url %s", url)
 
 	eventListener := &eventListener{
 		requests:  map[network.RequestID]*Request{},
@@ -318,7 +318,6 @@ func (b *Browser) report(url string) (report *Report, err error) {
 			eventListener.responseReceived(ev.(*network.EventResponseReceived))
 		}
 	})
-	log.Printf("Connect event listener for the url %s, in the browser %d", url, idx)
 
 	var screenshot []byte
 	var content string
@@ -326,12 +325,13 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	if err = Run(tabContext.ctx, scrapPage(url, &screenshot, &content, &errors)); err != nil {
 		return
 	}
-	log.Printf("Fetch completed for the url %s, in the browser %d", url, idx)
 	report.Screenshot = base64.StdEncoding.EncodeToString(screenshot)
 	report.Content = base64.StdEncoding.EncodeToString([]byte(content))
 	report.Errors = errors
 	report.Requests = eventListener.dumpCollectedRequests()
 	report.Redirects = eventListener.redirects
+
+	log.Printf("Fetching the url %s completed", url)
 
 	return
 }
@@ -407,6 +407,7 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Report is completed for %s, %d ms ", urlDecoded, report.Elapsed)
 
 	h.sendReport(w, report)
+	log.Printf("Report is sent for %s, %d ms ", urlDecoded, report.Elapsed)
 }
 
 func (h *HTTPHandler) stats(w http.ResponseWriter, r *http.Request) {
