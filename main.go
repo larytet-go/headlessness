@@ -126,7 +126,7 @@ func getChromeOpions() []ExecAllocatorOption {
 		NoDefaultBrowserCheck,
 		NoSandbox,
 		// Headless,
-		Flag("remote-debugging-port", "9222"),
+		// Flag("remote-debugging-port", "9222"), https://github.com/chromedp/chromedp/issues/821
 		Flag("disable-background-networking", true),
 		Flag("enable-features", "NetworkService,NetworkServiceInProcess"),
 		Flag("disable-background-timer-throttling", true),
