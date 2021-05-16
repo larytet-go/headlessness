@@ -25,7 +25,8 @@ type contextWithCancel struct {
 }
 
 type Browser struct {
-	execAllocator contextWithCancel
+	execAllocator  contextWithCancel
+	browserContext contextWithCancel
 }
 
 type Request struct {
@@ -98,6 +99,10 @@ func New() (browser *Browser, err error) {
 	opts := getChromeOpions()
 	// create context
 	browser.execAllocator.ctx, browser.execAllocator.cancel = NewExecAllocator(context.Background(), opts...)
+	browser.browserContext.ctx, browser.browserContext.cancel = NewContext(
+		browser.execAllocator.ctx,
+		WithErrorf(log.Printf), //WithErrorf, WithDebugf
+	)
 
 	return
 }
@@ -232,7 +237,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	defer eventListener.removeDocumentURL(url)
 
 	browserContextCtx, browserContextCancel := NewContext(
-		b.execAllocator.ctx,
+		b.browserContext.ctx,
 		WithErrorf(log.Printf), //WithErrorf, WithDebugf
 	)
 	defer browserContextCancel()
@@ -242,7 +247,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	// https://github.com/chromedp/chromedp/issues/180
 	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
 	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
-	ListenTarget(browserContextCtx, func(ev interface{}) {
+	ListenTarget(b.browserContext.ctx, func(ev interface{}) {
 		switch ev.(type) {
 		case *network.EventRequestServedFromCache:
 			eventListener.requestServedFromCache(ev.(*network.EventRequestServedFromCache))
@@ -269,7 +274,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 }
 
 func (b *Browser) close() {
-	//b.browserContext.cancel()
+	b.browserContext.cancel()
 	b.execAllocator.cancel()
 }
 
