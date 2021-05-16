@@ -36,6 +36,7 @@ type Request struct {
 }
 
 type Report struct {
+	URL           string
 	TransactionID string    `json:"transaction_id"`
 	URL           string    `json:"url"`
 	RequestID     string    `json:"request_id"`
@@ -274,12 +275,12 @@ func (h *HTTPHandler) _500(w http.ResponseWriter, err error) {
 	w.Write([]byte(err.Error()))
 }
 
-func (h *HTTPHandler) _200(w http.ResponseWriter, data []byte) {
+func (h *HTTPHandler) sendReport(w http.ResponseWriter, report Report) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	count, err := w.Write(data)
+	count, err := w.Write(report.toJSON(true))
 	if err != nil {
-		err := fmt.Errorf("Failed to write report for %v to the peer : %v, count=%d", url, err, count)
+		err := fmt.Errorf("Failed to write report for %v to the peer : %v, count=%d", report.URL, err, count)
 		log.Printf(err.Error())
 	}
 }
@@ -314,8 +315,9 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 
 	report.TransactionID = transactionID
 	report.Elapsed = time.Since(startTime).Milliseconds()
+	report.URL = url
 
-	h._200(report.toJSON(true))
+	h.sendReport(report)
 }
 
 func (h *HTTPHandler) stats(w http.ResponseWriter, r *http.Request) {
