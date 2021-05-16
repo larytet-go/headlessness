@@ -51,7 +51,7 @@ func NewPoolOfBrowserTabs(ctx context.Context, size int) *PoolOfBrowserTabs {
 func (p *PoolOfBrowserTabs) close() {
 	for i := 0; i < p.top; i++ {
 		ctx := p.contexts[i]
-		ctx.close()
+		ctx.cancel()
 	}
 }
 
