@@ -24,9 +24,62 @@ type contextWithCancel struct {
 	cancel context.CancelFunc
 }
 
+type PoolOfBrowserTabs struct {
+	size     int
+	top      int
+	contexts []contextWithCancel
+	mutex    sync.Mutex
+}
+
+func NewPoolOfBrowserTabs(ctx context.Context, size int) *PoolOfBrowserTabs {
+	contexts := []contextWithCancel{}
+	for i := 0; i < size; i++ {
+		browserCtx := contextWithCancel{}
+		browserCtx.ctx, browserCtx.cancel = NewContext(
+			ctx,
+			WithErrorf(log.Printf), //WithErrorf, WithDebugf
+		)
+		contexts = append(contexts, browserCtx)
+	}
+	return &PoolOfBrowserTabs{
+		size:     size,
+		top:      size,
+		contexts: contexts,
+	}
+}
+
+func (p *PoolOfBrowserTabs) close() {
+	for i := 0; i < p.top; i++ {
+		ctx := p.contexts[i]
+		ctx.close()
+	}
+}
+
+func (p *PoolOfBrowserTabs) pop() (ctx contextWithCancel, err error) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if top == 0 {
+		return ctx, fmt.Errorf("Empty")
+	}
+	top -= 1
+	return p.contexts[top], nil
+}
+
+func (p *PoolOfBrowserTabs) push(ctx contextWithCancel) (err error) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if top == size {
+		return fmt.Errorf("Full")
+	}
+	p.contexts[top] = ctx
+	top += 1
+}
+
 type Browser struct {
-	execAllocator  contextWithCancel
-	browserContext contextWithCancel
+	execAllocator     contextWithCancel
+	poolOfBrowserTabs *PoolOfBrowserTabs
 }
 
 type Request struct {
@@ -99,10 +152,7 @@ func New() (browser *Browser, err error) {
 	opts := getChromeOpions()
 	// create context
 	browser.execAllocator.ctx, browser.execAllocator.cancel = NewExecAllocator(context.Background(), opts...)
-	browser.browserContext.ctx, browser.browserContext.cancel = NewContext(
-		browser.execAllocator.ctx,
-		WithErrorf(log.Printf), //WithErrorf, WithDebugf
-	)
+	browser.poolOfBrowserTabs = NewPoolOfBrowserTabs(browser.execAllocator.ctx, 4)
 
 	return
 }
@@ -227,6 +277,11 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	report = &Report{URL: url,
 		Requests: []Request{},
 	}
+	tabContext, err := b.poolOfBrowserTabs.pop()
+	if err != nil {
+		return report, fmt.Errorf("Too many tabs already")
+	}
+	defer b.push(tabContext)
 
 	eventListener := &eventListener{
 		requests:  map[network.RequestID]*Request{},
@@ -241,7 +296,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	// https://github.com/chromedp/chromedp/issues/180
 	// https://pkg.go.dev/github.com/chromedp/chromedp#WaitNewTarget
 	// https://github.com/chromedp/chromedp/issues/700 <-- abort request
-	ListenTarget(b.browserContext.ctx, func(ev interface{}) {
+	ListenTarget(tabContext, func(ev interface{}) {
 		switch ev.(type) {
 		case *network.EventRequestServedFromCache:
 			eventListener.requestServedFromCache(ev.(*network.EventRequestServedFromCache))
@@ -255,7 +310,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	var screenshot []byte
 	var content string
 	var errors string
-	if err = Run(b.browserContext.ctx, scrapPage(url, &screenshot, &content, &errors)); err != nil {
+	if err = Run(tabContext, scrapPage(url, &screenshot, &content, &errors)); err != nil {
 		return
 	}
 	report.Screenshot = base64.StdEncoding.EncodeToString(screenshot)
@@ -268,7 +323,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 }
 
 func (b *Browser) close() {
-	b.browserContext.cancel()
+	b.PoolOfBrowserTabs.cancel()
 	b.execAllocator.cancel()
 }
 
