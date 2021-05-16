@@ -47,7 +47,7 @@ type Report struct {
 	Screenshot    string    `json:"screenshot"`
 	Content       string    `json:"content"`
 	Errors        string    `json:"errors"`
-	Elapsed       int       `json:"elapsed"`
+	Elapsed       int64     `json:"elapsed"`
 }
 
 func (r *Report) toJSON(pretty bool) (s []byte) {
@@ -320,7 +320,7 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 
 	report.TransactionID = transactionID[0]
 	report.Elapsed = time.Since(startTime).Milliseconds()
-	report.URL = url
+	report.URL = urlDecoded
 
 	h.sendReport(report)
 }
