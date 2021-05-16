@@ -329,7 +329,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 }
 
 func (b *Browser) close() {
-	b.poolOfBrowserTabs.cancel()
+	b.poolOfBrowserTabs.close()
 	b.execAllocator.cancel()
 }
 
