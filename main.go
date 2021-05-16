@@ -31,16 +31,17 @@ type PoolOfBrowserTabs struct {
 	mutex    sync.Mutex
 }
 
-func NewPoolOfBrowserTabs(size int) *PoolOfBrowserTabs {
+// Returns a pool (stack) of browser tabs
+func NewPoolOfBrowserTabs(newExecAllocator context.Context, size int) *PoolOfBrowserTabs {
 	contexts := make([]contextWithCancel, size)
 
-	// https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
-	opts := getChromeOpions()
-
 	for i := 0; i < size; i++ {
-		browserCtx := contextWithCancel{}
-		browserCtx.ctx, browserCtx.cancel = NewExecAllocator(context.Background(), opts...)
-		contexts[i] = browserCtx
+		tabContext := contextWithCancel{}
+		tabContext.ctx, tabContext.cancel = NewContext(
+			newExecAllocator,
+			WithErrorf(log.Printf), //WithErrorf, WithDebugf
+		)
+		contexts[i] = tabContext
 	}
 	return &PoolOfBrowserTabs{
 		size:     size,
@@ -85,6 +86,7 @@ func (p *PoolOfBrowserTabs) push(ctx contextWithCancel) (err error) {
 }
 
 type Browser struct {
+	browserContext    contextWithCancel
 	poolOfBrowserTabs *PoolOfBrowserTabs
 }
 
@@ -154,8 +156,13 @@ func getChromeOpions() []ExecAllocatorOption {
 
 func New() (browser *Browser, err error) {
 	browser = &Browser{}
+
+	// https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
+	opts := getChromeOpions()
+	browser.browserContext.ctx, browser.browserContext.cancel = NewExecAllocator(context.Background(), opts...)
+
 	// create contexts
-	browser.poolOfBrowserTabs = NewPoolOfBrowserTabs(12)
+	browser.poolOfBrowserTabs = NewPoolOfBrowserTabs(browser.browserContext.ctx, 12)
 
 	return
 }
@@ -280,18 +287,13 @@ func (b *Browser) report(url string) (report *Report, err error) {
 	report = &Report{URL: url,
 		Requests: []Request{},
 	}
-	browserContext, err := b.poolOfBrowserTabs.pop()
+
+	// Allocate a free tab from the pool of the browser tabs
+	tabContext, err := b.poolOfBrowserTabs.pop()
 	if err != nil {
 		return report, fmt.Errorf("Too many tabs already")
 	}
-	defer b.poolOfBrowserTabs.push(browserContext)
-
-	tabContext := contextWithCancel{}
-	tabContext.ctx, tabContext.cancel = NewContext(
-		browserContext.ctx,
-		WithErrorf(log.Printf), //WithErrorf, WithDebugf
-	)
-	defer tabContext.cancel()
+	defer b.poolOfBrowserTabs.push(tabContext)
 
 	log.Printf("Fetching the url %s", url)
 
@@ -338,6 +340,7 @@ func (b *Browser) report(url string) (report *Report, err error) {
 
 func (b *Browser) close() {
 	b.poolOfBrowserTabs.close()
+	b.browserContext.cancel()
 }
 
 type HTTPHandler struct {
