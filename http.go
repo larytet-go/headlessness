@@ -111,4 +111,3 @@ func (h *HTTPHandler) stats(w http.ResponseWriter, r *http.Request) {
 
 func (h *HTTPHandler) screenshot(w http.ResponseWriter, r *http.Request) {
 }
-

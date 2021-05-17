@@ -30,11 +30,11 @@ COPY go.* ./
 COPY *.go ./
 COPY ./chrome/*.go ./chrome/
 
-RUN go get .
+# RUN go get .
+RUN go mod download
+RUN GOOS=linux CGO_ENABLED=1 GOARCH=amd64 go build -a -o . ./
 RUN cat go.mod
 RUN cat go.sum
-
-RUN GOOS=linux CGO_ENABLED=1 GOARCH=amd64 go build -a -o . ./
 
 ########################################
 #  The production container starts here 
