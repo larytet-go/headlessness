@@ -81,6 +81,7 @@ func getURLs(r *http.Request) (urls []string, err error) {
 		}
 		urls = append(urls, urlDecoded)
 	}
+
 	if r.ContentLength <= 0 {
 		return
 	}
