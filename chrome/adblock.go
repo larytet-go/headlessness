@@ -1,8 +1,9 @@
 package chrome
 
 import (
-	"fmt"
 	"bufio"
+	"fmt"
+	"log"
 	"os"
 	"strings"
 )
@@ -34,6 +35,7 @@ func NewAdBlockList(filenames []string) (AdBlockIfc, error) {
 func (ab *adBlockList) load(filenames []string) error {
 	blockList := map[string]struct{}{}
 	for _, filename := range filenames {
+		count := 0
 		file, err := os.Open(filename)
 		if err != nil {
 			return fmt.Errorf("Failed to open %s %v", filename, err)
@@ -51,10 +53,12 @@ func (ab *adBlockList) load(filenames []string) error {
 				continue
 			}
 			blockList[strings.TrimSpace(columns[1])] = struct{}{}
+			count++
 		}
 		if err := scanner.Err(); err != nil {
 			return fmt.Errorf("Failed to read %s %v", filename, err)
 		}
+		log.Printf("AdBlock loaded %d hosts from %s\n", count, filename)
 	}
 	return nil
 }
