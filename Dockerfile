@@ -17,16 +17,23 @@ RUN apt-get install -y --no-install-recommends \
 RUN curl https://dl.google.com/go/go1.16.4.linux-amd64.tar.gz > /tmp/go1.16.4.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && tar -C /usr/local -xzf /tmp/go1.16.4.linux-amd64.tar.gz
 
-WORKDIR /home/chrome
-
 ENV PATH=${PATH}:/usr/local/go/bin
 RUN go version
 
-COPY go.* ./
-RUN go mod download
-RUN cat go.mod
 
+RUN mkdir -p ${PWD}/go/src/headlessness
+ENV GOPATH=/home/chrome/go
+
+WORKDIR /home/chrome/go/src/headlessness
+
+COPY go.* ./
 COPY *.go ./
+COPY ./chrome/*.go ./chrome/
+
+RUN go get .
+RUN cat go.mod
+RUN cat go.sum
+
 RUN GOOS=linux CGO_ENABLED=1 GOARCH=amd64 go build -a -o . ./
 
 ########################################
