@@ -402,7 +402,7 @@ func (b *Browser) AsyncReports(transactionID string, urls []string, deadline tim
 		if _, ok := processedURLs[url]; ok {
 			continue
 		}
-		reports.Errors += reports.Errors + fmt.Sprintf("URL %s hist deadline. ", url)
+		reports.Errors += reports.Errors + fmt.Sprintf("URL %s hit deadline. ", url)
 	}
 
 	// Drop the remaining URLs, close the channel
