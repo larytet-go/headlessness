@@ -1,4 +1,4 @@
-module gitlab-il.cyren.io/ccs/headlessness
+module headlessness
 
 go 1.13
 
