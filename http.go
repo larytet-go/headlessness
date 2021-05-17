@@ -71,7 +71,7 @@ func getURLs(r *http.Request) (urls []string, err error) {
 
 	urls = []string{}
 	urlsEncoded := []string{}
-	urlsEncoded, ok := r.URL.Query()["url"]
+	urlsEncoded, _ = r.URL.Query()["url"]
 	for _, urlEncoded := range urlsEncoded {
 		var urlDecoded string
 		urlDecoded, err = url.QueryUnescape(urlEncoded)
