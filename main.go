@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -49,7 +50,7 @@ func dumpReport(report *chrome.Report, dumpFilename string) {
 
 func dumpReports(dumpFilename string) {
 	reports := &chrome.Reports{}
-	err := json.NewDecoder(os.Stdin).Decode(reportPayload)
+	err := json.NewDecoder(os.Stdin).Decode(reports)
 	if err != nil {
 		fmt.Print(err.Erorr())
 		return
