@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"time"
 	"sync/atomic"
+	"time"
 
 	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/network"
@@ -85,10 +85,10 @@ func (p *PoolOfBrowserTabs) push(ctx contextWithCancel) (err error) {
 }
 
 type Browser struct {
-	MaxTabs int
-	browserContext    contextWithCancel
-	browserTab contextWithCancel
-	ActiveTabs int32
+	MaxTabs        int
+	browserContext contextWithCancel
+	browserTab     contextWithCancel
+	ActiveTabs     int64
 }
 
 type Request struct {
@@ -182,7 +182,7 @@ func New() (browser *Browser, err error) {
 	browser.browserContext.ctx, browser.browserContext.cancel = NewExecAllocator(context.Background(), opts...)
 
 	// create contexts
-	browser.browserTab.ctx, browser.browserTab.cancel = NewContext(browser.browserContext.ctx, 
+	browser.browserTab.ctx, browser.browserTab.cancel = NewContext(browser.browserContext.ctx,
 		WithErrorf(log.Printf), //WithErrorf, WithDebugf
 	)
 
@@ -314,7 +314,7 @@ func (b *Browser) report(url string, deadline time.Duration) (report *Report, er
 
 	tabContext := contextWithCancel{}
 	// Allocate a free tab from the pool of the browser tabs
-	tabContext.ctx, tabContext.cancel = NewContext(b.browserTab.ctx, 
+	tabContext.ctx, tabContext.cancel = NewContext(b.browserTab.ctx,
 		WithErrorf(log.Printf), //WithErrorf, WithDebugf)
 	)
 	defer tabContext.cancel()
