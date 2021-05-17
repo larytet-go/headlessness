@@ -68,7 +68,7 @@ func getURLs(r *http.Request) (urls []string, err error) {
 		var urlDecoded string
 		urlDecoded, err = url.QueryUnescape(urlEncoded)
 		if err != nil {
-			err := fmt.Errorf("Failed to decode URL %v: %v", urlEncoded, err)
+			err = fmt.Errorf("Failed to decode URL %v: %v", urlEncoded, err)
 			return
 		}
 		urls = append(urls, urlDecoded)
