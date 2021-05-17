@@ -377,7 +377,7 @@ func (b *Browser) AsyncReports(transactionID string, urls []string, deadline tim
 	reportsCh := make(chan *Report, urlsCount)
 
 	for _, url := range urls {
-		go bh.asyncReport( transactionIDurl, reportsCh, deadline)
+		go bh.asyncReport(transactionIDurl, reportsCh, deadline)
 	}
 
 	reports = &Reports{
@@ -395,6 +395,7 @@ func (b *Browser) AsyncReports(transactionID string, urls []string, deadline tim
 			continue
 		case <-time.After(deadline):
 			break
+		}
 	}
 
 	// Drop the remaining URLs, close the channel
@@ -404,10 +405,7 @@ func (b *Browser) AsyncReports(transactionID string, urls []string, deadline tim
 			log.Printf("Report hit deadline for transactionID %s url %s, %d ms", transactionID, report.URL, report.Elapsed)
 		}
 		close(reportsCh)
-	}
-
+	}()
 
 	return
 }
-
-

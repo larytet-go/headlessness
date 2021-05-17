@@ -1,6 +1,5 @@
 package main
 
-
 type HTTPHandler struct {
 	browser *Browser
 }
@@ -28,7 +27,6 @@ func (h *HTTPHandler) sendReport(w http.ResponseWriter, reports *Reports) {
 		log.Printf(err.Error())
 	}
 }
-
 
 func getDeadline(r *http.Request) time.Duration {
 	deadlines, ok := r.URL.Query()["deadlines"]
@@ -98,4 +96,3 @@ func (h *HTTPHandler) stats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte("Ok"))
 }
-
