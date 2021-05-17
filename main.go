@@ -1,5 +1,11 @@
 package main
 
+import (
+	"log"
+	"net/http"
+	"time"
+)
+
 func main() {
 	browser, err := New()
 	if err != nil {

@@ -1,15 +1,11 @@
 package main
 
 import (
-	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -92,7 +88,7 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	transactionID := getTransactionID(r)
 	deadline := getDeadline(r)
 
-	reports, err := h.browser.asyncReports(transactionID, urlsDecoded, deadline)
+	reports, err := h.browser.AsyncReports(transactionID, urlsDecoded, deadline)
 	if err != nil {
 		err := fmt.Errorf("Failed to fetch transactionID %s, URLs %v: %v", transactionID, urlsDecoded, err)
 		h._500(w, err)
