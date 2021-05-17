@@ -183,6 +183,7 @@ func New() (browser *Browser, err error) {
 	browser.browserContext.ctx, browser.browserContext.cancel = NewExecAllocator(context.Background(), opts...)
 
 	// create contexts
+	// https://github.com/chromedp/chromedp/issues/821
 	browser.browserTab.ctx, browser.browserTab.cancel = NewContext(browser.browserContext.ctx,
 		WithErrorf(log.Printf), //WithErrorf, WithDebugf
 	)
