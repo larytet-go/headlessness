@@ -88,7 +88,7 @@ type Browser struct {
 	MaxTabs int
 	browserContext    contextWithCancel
 	browserTab contextWithCancel
-	activeTabs int32
+	ActiveTabs int32
 }
 
 type Request struct {
