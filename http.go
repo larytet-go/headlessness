@@ -40,12 +40,15 @@ func (h *HTTPHandler) sendReport(w http.ResponseWriter, reports *Reports) {
 func getDeadline(r *http.Request) time.Duration {
 	deadlines, ok := r.URL.Query()["deadline"]
 	if !ok {
+		log.Printf("No deadline using default\n")
 		deadlines = []string{"5000"}
 	}
 	deadline, err := strconv.Atoi(deadlines[0])
 	if err != nil {
+		log.Printf("Failed to parse %s\n", deadlines[0])
 		deadline = 5000
 	}
+	log.Printf("deadline %d\n", deadline)
 	return time.Duration(deadline) * time.Millisecond
 }
 
