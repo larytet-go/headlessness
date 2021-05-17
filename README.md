@@ -22,6 +22,14 @@ while [ 1 ];do echo -en "\\033[0;0H";curl "http://0.0.0.0:8081/stats?format=text
 ```
 
 
+## TODO
+
+* Adblock
+* Persistent cache
+* Screenshot of the whole browser
+* Custom Chrome build allowing display and VNC
+* 
+
 ## Links
 
 * https://github.com/chromedp/docker-headless-shell
