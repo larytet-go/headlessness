@@ -82,8 +82,8 @@ func getURLs(r *http.Request) (urls []string, err error) {
 
 func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
+	maxURLs, activeTabs := h.browser.MaxTabs, h.browser.ActiveTabs
 
-	maxURLs := h.browser.MaxTabs
 	urls, err := getURLs(r)
 	if err != nil {
 		h._400(w, err)
@@ -91,8 +91,8 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	}
 
 	urlsCount := len(urls)
-	if urlsCount > maxURLs {
-		err := fmt.Errorf("Too many 'url' parameters in %v, max is %d", r.URL.RawQuery, maxURLs)
+	if urlsCount+activeTabs > maxURLs {
+		err := fmt.Errorf("Too many 'url' parameters in %v, max is %d, active tabs %d", r.URL.RawQuery, maxURLs, activeTabs)
 		h._400(w, err)
 		return
 	}

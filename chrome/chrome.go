@@ -10,6 +10,7 @@ import (
 	"log"
 	"sync"
 	"time"
+	"sync/atomic"
 
 	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/network"
@@ -87,6 +88,7 @@ type Browser struct {
 	MaxTabs int
 	browserContext    contextWithCancel
 	browserTab contextWithCancel
+	activeTabs int32
 }
 
 type Request struct {
@@ -304,6 +306,8 @@ func (el *eventListener) dumpCollectedRequests() (requests []Request) {
 }
 
 func (b *Browser) report(url string, deadline time.Duration) (report *Report, err error) {
+	atomic.AddInt64(&b.ActiveTabs, 1)
+	defer atomic.AddInt64(&b.ActiveTabs, -1)
 	report = &Report{URL: url,
 		Requests: []Request{},
 	}
@@ -360,6 +364,7 @@ func (b *Browser) close() {
 }
 
 func (b *Browser) asyncReport(transactionID string, url string, result chan *Report, deadline time.Duration) {
+
 	startTime := time.Now()
 	report, err := b.report(url, deadline)
 	if err != nil {
