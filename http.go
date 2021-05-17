@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -61,7 +62,13 @@ func getTransactionID(r *http.Request) string {
 	return transactionID
 }
 
+type ReportPayload struct {
+	URLs []string `json:"urls"`
+}
+
 func getURLs(r *http.Request) (urls []string, err error) {
+	defer r.Body.Close()
+
 	urls = []string{}
 	urlsEncoded, ok := r.URL.Query()["url"]
 	if !ok {
@@ -75,6 +82,20 @@ func getURLs(r *http.Request) (urls []string, err error) {
 			return
 		}
 		urls = append(urls, urlDecoded)
+	}
+	if r.ContentLength <= 0 {
+		return
+	}
+
+	reportPayload := &ReportPayload{}
+	err := json.NewDecoder(r.Body).Decode(reportPayload)
+	if err != nil {
+		err = fmt.Errorf("Failed to decode JSON payload: %v", err)
+		return
+	}
+
+	for _, url := range reportPayload.URLs {
+		urls = append(urls, url)
 	}
 
 	return

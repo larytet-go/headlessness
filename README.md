@@ -7,7 +7,7 @@ Headlessness is an HTTP service wrapping the [ChromeDP](https://github.com/chrom
 # go fmt .
 docker build -t headlessness .
 docker run --shm-size 2G --rm -p 5900:5900 -p 8081:8081 --init headlessness
-curl --silent -X POST "http://0.0.0.0:8081/fetch?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3D9B0eXmbrBIo&deadline=3000&transaction_id=1&"
+curl --silent --data '{"urls":["https://www.google.com/"]}' "http://0.0.0.0:8081/fetch&deadline=3000&transaction_id=1&"
 ```
 
 Try VNC 127.0.0.1:5900
