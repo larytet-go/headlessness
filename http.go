@@ -62,8 +62,11 @@ func getTransactionID(r *http.Request) string {
 }
 
 func getURLs(r *http.Request) (urls []string, err error) {
-	urlsEncoded, ok := r.URL.Query()["url"]
 	urls = []string{}
+	urlsEncoded, ok := r.URL.Query()["url"]
+	if !ok {
+		return
+	}
 	for i, urlEncoded := range urlsEncoded {
 		var urlDecoded string
 		urlDecoded, err = url.QueryUnescape(urlEncoded)
