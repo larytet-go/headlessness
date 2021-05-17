@@ -38,7 +38,7 @@ func (h *HTTPHandler) sendReport(w http.ResponseWriter, reports *Reports) {
 }
 
 func getDeadline(r *http.Request) time.Duration {
-	deadlines, ok := r.URL.Query()["deadlines"]
+	deadlines, ok := r.URL.Query()["deadline"]
 	if !ok {
 		deadlines = []string{"5000"}
 	}
