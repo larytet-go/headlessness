@@ -108,3 +108,7 @@ func (h *HTTPHandler) stats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte("Ok"))
 }
+
+func (h *HTTPHandler) screenshot(w http.ResponseWriter, r *http.Request) {
+}
+

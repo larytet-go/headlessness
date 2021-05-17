@@ -1,4 +1,6 @@
 
+Headlessness is an HTTP service wrapping the [ChromeDP](https://github.com/chromedp/chromedp/) plus performance related candies. Headlessness achieves sub-second simultaneous rendering of 10s of WEB pages, enforces deadlines, mitigates browser failures.
+
 ## Usage
 
 ```

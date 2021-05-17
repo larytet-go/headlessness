@@ -107,7 +107,7 @@ RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
     && mkdir -p /home/chrome/Downloads \
     && chown -R chrome:chrome /home/chrome
 
-COPY --from=dev /home/chrome/headlessness .
+COPY --from=dev /home/chrome/go/src/headlessness/headlessness .
 # Run everything after as non-privileged user.
 USER chrome
 
