@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
@@ -63,7 +62,7 @@ func dumpReports(dumpFilename string) {
 	}
 
 	for _, report := range reports.URLReports {
-		dumpReport(&report, dumpFilename)
+		dumpReport(report, dumpFilename)
 	}
 }
 
