@@ -189,7 +189,7 @@ func New() (browser *Browser, err error) {
 		WithErrorf(log.Printf), //WithErrorf, WithDebugf
 	)
 
-	browser.adBlockList, err = NewAdBlockList([]string{"./ads-servers.txt", "./ads-servers.he.txt"})
+	browser.adBlock, err = NewAdBlockList([]string{"./ads-servers.txt", "./ads-servers.he.txt"})
 	if err != nil {
 		return
 	}

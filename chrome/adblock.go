@@ -59,7 +59,7 @@ func (ab *adBlockList) load(filenames []string) error {
 	return nil
 }
 
-func getTLD(hostname string, count int) {
+func getTLD(hostname string, count int) string {
 	words := strings.Split(hostname, ".")
 	if len(words) > count {
 		words = words[len(words)-count-1:]
@@ -73,10 +73,11 @@ func (ab *adBlockList) IsAd(hostname string) bool {
 	if _, ok := ab.blockList[hostname]; ok {
 		return true
 	}
-	if _, ok := ab.blockList[getTld(hostname, 2)]; ok {
+	if _, ok := ab.blockList[getTLD(hostname, 2)]; ok {
 		return true
 	}
-	if _, ok := ab.blockList[getTld(hostname, 3)]; ok {
+	if _, ok := ab.blockList[getTLD(hostname, 3)]; ok {
 		return true
 	}
+	return false
 }
