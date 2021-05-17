@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -174,7 +175,7 @@ func getChromeOpions() []ExecAllocatorOption {
 }
 
 func New() (browser *Browser, err error) {
-	maxTabs := 12
+	maxTabs := runtime.NumCPU()
 	browser = &Browser{MaxTabs: maxTabs}
 
 	// https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
