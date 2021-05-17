@@ -52,7 +52,7 @@ func dumpReports(dumpFilename string) {
 	reports := &chrome.Reports{}
 	err := json.NewDecoder(os.Stdin).Decode(reports)
 	if err != nil {
-		fmt.Print(err.Erorr())
+		log.Fatalf("Failed to decode the JSON %v %v", err)
 		return
 	}
 	if dumpFilename == "" {
