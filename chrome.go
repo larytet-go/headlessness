@@ -402,14 +402,14 @@ func (b *Browser) AsyncReports(transactionID string, urls []string, deadline tim
 		if _, ok := processedURLs[url]; ok {
 			continue
 		}
-		reports.Errors += reports.Errors + fmt.Sprintf("URL %s hit deadline. ", url)
+		reports.Errors += reports.Errors + fmt.Sprintf("URL %s hit deadline %ds. ", url, deadline/time.Millisecond)
 	}
 
 	// Drop the remaining URLs, close the channel
 	go func() {
 		for i := 0; i < urlsCount-len(reports.URLReports); i++ {
 			report := <-reportsCh
-			log.Printf("Report hit deadline for transactionID %s url %s, %d ms", transactionID, report.URL, report.Elapsed)
+			log.Printf("Report hit deadline %ds for transactionID %s url %s, processing time %d ms", deadline/time.Millisecond, transactionID, report.URL, report.Elapsed)
 		}
 		close(reportsCh)
 	}()
