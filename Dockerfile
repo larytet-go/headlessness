@@ -32,7 +32,7 @@ COPY ./chrome/*.go ./chrome/
 
 # RUN go get .
 RUN go mod download
-RUN GOOS=linux CGO_ENABLED=1 GOARCH=amd64 go build -a -o . ./
+RUN GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -a -o . ./
 RUN cat go.mod
 RUN cat go.sum
 
