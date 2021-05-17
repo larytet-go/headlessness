@@ -29,10 +29,10 @@ func (h *HTTPHandler) _500(w http.ResponseWriter, err error) {
 	w.Write([]byte(err.Error()))
 }
 
-func (h *HTTPHandler) sendReport(w http.ResponseWriter, reports *Reports) {
+func (h *HTTPHandler) sendReport(w http.ResponseWriter, reports *chrome.Reports) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	count, err := w.Write(reports.toJSON(true))
+	count, err := w.Write(reports.ToJSON(true))
 	if err != nil {
 		err := fmt.Errorf("Failed to write report for transactionID=%s url=%v to the peer : %v, count=%d", reports.TransactionID, reports.URLs, err, count)
 		log.Printf(err.Error())

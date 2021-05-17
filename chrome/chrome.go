@@ -130,7 +130,7 @@ type Reports struct {
 	Errors        string    `json:"errors"`
 }
 
-func (r *Reports) toJSON(pretty bool) (s []byte) {
+func (r *Reports) ToJSON(pretty bool) (s []byte) {
 	if pretty {
 		s, _ = json.MarshalIndent(r, "", "\t")
 	} else {
