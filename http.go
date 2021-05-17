@@ -61,39 +61,49 @@ func getTransactionID(r *http.Request) string {
 	return transactionID
 }
 
+func getURLs(r *http.Request) (urls []string, err error) {
+	urlsEncoded, ok := r.URL.Query()["url"]
+	urls = []string{}
+	for i, urlEncoded := range urlsEncoded {
+		urlDecoded, err := url.QueryUnescape(urlEncoded)
+		if err != nil {
+			err := fmt.Errorf("Failed to decode URL %v: %v", urlEncoded, err)
+			return
+		}
+		urls = append(urls, urlDecoded)
+	}
+
+	return
+}
+
 func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
-	urlsEncoded, ok := r.URL.Query()["url"]
-	if !ok {
-		err := fmt.Errorf("URL is missing in %v", r.URL.RawQuery)
+
+	maxURLs := h.browser.MaxTabs
+	urls, err := getURLs(r)
+	if err != nil {
 		h._400(w, err)
 		return
 	}
-	maxURLs := h.browser.MaxTabs
-	urlsCount := len(urlsEncoded)
+
+	urlsCount := len(urls)
 	if urlsCount > maxURLs {
 		err := fmt.Errorf("Too many 'url' parameters in %v, max is %d", r.URL.RawQuery, maxURLs)
 		h._400(w, err)
 		return
 	}
-
-	urlsDecoded := make([]string, urlsCount)
-	for i, urlEncoded := range urlsEncoded {
-		urlDecoded, err := url.QueryUnescape(urlEncoded)
-		if err != nil {
-			err := fmt.Errorf("Failed to decode URL %v: %v", urlEncoded, err)
-			h._400(w, err)
-			return
-		}
-		urlsDecoded[i] = urlDecoded
+	if urlsCount == 0 {
+		err := fmt.Errorf("URL is missing in %v", r.URL.RawQuery)
+		h._400(w, err)
+		return
 	}
 
 	transactionID := getTransactionID(r)
 	deadline := getDeadline(r)
 
-	reports, err := h.browser.AsyncReports(transactionID, urlsDecoded, deadline)
+	reports, err := h.browser.AsyncReports(transactionID, urls, deadline)
 	if err != nil {
-		err := fmt.Errorf("Failed to fetch transactionID %s, URLs %v: %v", transactionID, urlsDecoded, err)
+		err := fmt.Errorf("Failed to fetch transactionID %s, URLs %v: %v", transactionID, urls, err)
 		h._500(w, err)
 		return
 	}
