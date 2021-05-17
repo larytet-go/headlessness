@@ -58,7 +58,7 @@ func (ab *adBlockList) load(filenames []string) error {
 		if err := scanner.Err(); err != nil {
 			return fmt.Errorf("Failed to read %s %v", filename, err)
 		}
-		log.Printf("AdBlock loaded %d hosts from %s\n", count, filename)
+		log.Printf("AdBlock loaded %d hosts from %s", count, filename)
 	}
 	return nil
 }

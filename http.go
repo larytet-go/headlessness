@@ -47,7 +47,7 @@ func getDeadline(r *http.Request) time.Duration {
 	}
 	deadline, err := strconv.Atoi(deadlines[0])
 	if err != nil {
-		log.Printf("Failed to parse deadline %s\n", deadlines[0])
+		log.Printf("Failed to parse deadline %s", deadlines[0])
 		deadline = 5000
 	}
 	return time.Duration(deadline) * time.Millisecond
