@@ -25,10 +25,12 @@ while [ 1 ];do echo -en "\\033[0;0H";curl "http://0.0.0.0:8081/stats?format=text
 ## TODO
 
 * Adblock
+* A command line unitility dumping the .png image and page content to files
+* HTTP POST with JSON containing URLs
 * Persistent cache
 * Screenshot of the whole browser
 * Custom Chrome build allowing display and VNC
-* 
+
 
 ## Links
 
