@@ -82,7 +82,7 @@ func getURLs(r *http.Request) (urls []string, err error) {
 
 func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
-	maxURLs, activeTabs := h.browser.MaxTabs, h.browser.ActiveTabs
+	maxURLs, activeTabs := h.browser.MaxTabs, int(h.browser.ActiveTabs)
 
 	urls, err := getURLs(r)
 	if err != nil {
