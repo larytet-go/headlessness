@@ -39,3 +39,4 @@ while [ 1 ];do echo -en "\\033[0;0H";curl "http://0.0.0.0:8081/stats?format=text
 * https://github.com/chromedp/chromedp/issues/128
 * https://github.com/raff/godet
 * https://github.com/adieuadieu/serverless-chrome  - Lambda ready Chrome?
+* https://pkg.go.dev/github.com/chromedp/cdproto/cachestorage  - cache support
