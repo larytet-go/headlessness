@@ -107,9 +107,20 @@ RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
     && mkdir -p /home/chrome/Downloads \
     && chown -R chrome:chrome /home/chrome
 
+# Try docker build --build-arg CACHEBUST=$(date +%s) ...
+# https://stackoverflow.com/questions/35134713/disable-cache-for-specific-run-commands
+ARG CACHEBUST=1
+
+# Load ads servers
+# https://groups.google.com/a/chromium.org/g/headless-dev/c/G1u6SGeq7nw?pli=1
+RUN curl https://winhelp2002.mvps.org/hosts.txt > ./ads-servers.txt
+RUN curl https://raw.githubusercontent.com/larytet-py/ads_hosts/master/hosts.txt > ./ads-servers.he.txt
+
+
 COPY --from=dev /home/chrome/go/src/headlessness/headlessness .
 # Run everything after as non-privileged user.
 USER chrome
+
 
 COPY start.sh .
 ENTRYPOINT ["dumb-init", "--", "./start.sh"]

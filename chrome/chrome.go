@@ -90,6 +90,7 @@ type Browser struct {
 	browserContext contextWithCancel
 	browserTab     contextWithCancel
 	ActiveTabs     int64
+	adBlock        AdBlockIfc
 }
 
 type Request struct {
@@ -187,6 +188,11 @@ func New() (browser *Browser, err error) {
 	browser.browserTab.ctx, browser.browserTab.cancel = NewContext(browser.browserContext.ctx,
 		WithErrorf(log.Printf), //WithErrorf, WithDebugf
 	)
+
+	browser.adBlockList, err = NewAdBlockList([]string{"./ads-servers.txt", "./ads-servers.he.txt"})
+	if err != nil {
+		return
+	}
 
 	return
 }
