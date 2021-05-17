@@ -12,7 +12,7 @@ import (
 )
 
 type HTTPHandler struct {
-	browser *Browser
+	browser *chrome.Browser
 }
 
 func (h *HTTPHandler) _400(w http.ResponseWriter, err error) {
@@ -69,7 +69,7 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 		h._400(w, err)
 		return
 	}
-	maxURLs := h.browser.poolOfBrowserTabs.size
+	maxURLs := h.browser.MaxTabs
 	urlsCount := len(urlsEncoded)
 	if urlsCount > maxURLs {
 		err := fmt.Errorf("Too many 'url' parameters in %v, max is %d", r.URL.RawQuery, maxURLs)

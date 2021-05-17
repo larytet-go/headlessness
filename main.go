@@ -4,10 +4,12 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"headlessness/chrome"
 )
 
 func main() {
-	browser, err := New()
+	browser, err := chrome.New()
 	if err != nil {
 		log.Printf(err.Error())
 		return

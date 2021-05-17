@@ -84,6 +84,7 @@ func (p *PoolOfBrowserTabs) push(ctx contextWithCancel) (err error) {
 }
 
 type Browser struct {
+	MaxTabs int
 	browserContext    contextWithCancel
 	poolOfBrowserTabs *PoolOfBrowserTabs
 }
@@ -171,14 +172,15 @@ func getChromeOpions() []ExecAllocatorOption {
 }
 
 func New() (browser *Browser, err error) {
-	browser = &Browser{}
+	maxTabs := 12
+	browser = &Browser{MaxTabs: maxTabs}
 
 	// https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
 	opts := getChromeOpions()
 	browser.browserContext.ctx, browser.browserContext.cancel = NewExecAllocator(context.Background(), opts...)
 
 	// create contexts
-	browser.poolOfBrowserTabs = NewPoolOfBrowserTabs(browser.browserContext.ctx, 12)
+	browser.poolOfBrowserTabs = NewPoolOfBrowserTabs(browser.browserContext.ctx, maxTabs)
 
 	return
 }
