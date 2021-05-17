@@ -18,7 +18,7 @@ func randomFilename(l int) string {
 	lenFilenameLetters := len(filenameLetters)
 	runes := make([]rune, l)
 	for i := range runes {
-		runes[i] = IDLetters[rand.Intn(lenFilenameLetters)]
+		runes[i] = filenameLetters[rand.Intn(lenFilenameLetters)]
 	}
 	return string(runes)
 }
