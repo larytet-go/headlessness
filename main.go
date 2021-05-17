@@ -26,7 +26,7 @@ func randomFilename(l int) string {
 }
 
 func dumpFile(base64String, dumpFilename, extension string) {
-	data, err :=  base64.StdEncoding.DecodeString( base64String)
+	data, err := base64.StdEncoding.DecodeString(base64String)
 	if err != nil {
 		log.Fatalf("Failed to decode %v %v", extension, err)
 		return

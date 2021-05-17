@@ -3,6 +3,8 @@ Headlessness is an HTTP service wrapping the [ChromeDP](https://github.com/chrom
 
 ## Usage
 
+
+### Container 
 ```
 # go fmt .
 docker build -t headlessness .
@@ -13,6 +15,14 @@ curl --silent --data '{"urls":["https://www.google.com/", "https://www.google.co
 Try VNC 127.0.0.1:5900
 ```
 remmina -c $PWD/local-chrome.remmina
+```
+
+### Report dump tool
+
+```
+go mod download
+GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -a -o . ./
+curl --silent --data '{"urls":["https://www.google.com/"]}' "http://0.0.0.0:8081/fetch" | ./headlessness -parseReport=true -dumpFilename=google
 ```
 
 
