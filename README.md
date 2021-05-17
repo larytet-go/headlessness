@@ -23,6 +23,9 @@ remmina -c $PWD/local-chrome.remmina
 go mod download
 GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -a -o . ./
 curl --silent --data '{"urls":["https://www.google.com/"]}' "http://0.0.0.0:8081/fetch" | ./headlessness -parseReport=true -dumpFilename=google
+
+# Tip: use eog to display images in Ubuntu
+eog google.*.png 
 ```
 
 
