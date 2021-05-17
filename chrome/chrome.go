@@ -180,7 +180,7 @@ func New() (browser *Browser, err error) {
 	browser.browserContext.ctx, browser.browserContext.cancel = NewExecAllocator(context.Background(), opts...)
 
 	// create contexts
-	browser.browserTab = NewContext(browser.browserContext.ctx, 
+	browser.browserTab.ctx, browser.browserTab.cancel = NewContext(browser.browserContext.ctx, 
 		WithErrorf(log.Printf), //WithErrorf, WithDebugf
 	)
 
@@ -308,8 +308,9 @@ func (b *Browser) report(url string, deadline time.Duration) (report *Report, er
 		Requests: []Request{},
 	}
 
+	tabContext := contextWithCancel{}
 	// Allocate a free tab from the pool of the browser tabs
-	tabContext, err := NewContext(b.browserTab.ctx, 
+	tabContext.ctx, tabContext.cancel := NewContext(b.browserTab.ctx, 
 		WithErrorf(log.Printf), //WithErrorf, WithDebugf)
 	)
 	if err != nil {
