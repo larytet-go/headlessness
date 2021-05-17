@@ -86,7 +86,7 @@ func (p *PoolOfBrowserTabs) push(ctx contextWithCancel) (err error) {
 type Browser struct {
 	MaxTabs int
 	browserContext    contextWithCancel
-	poolOfBrowserTabs *PoolOfBrowserTabs
+	browserTab contextWithCancel
 }
 
 type Request struct {
@@ -180,7 +180,9 @@ func New() (browser *Browser, err error) {
 	browser.browserContext.ctx, browser.browserContext.cancel = NewExecAllocator(context.Background(), opts...)
 
 	// create contexts
-	browser.poolOfBrowserTabs = NewPoolOfBrowserTabs(browser.browserContext.ctx, maxTabs)
+	browser.browserTab = NewContext(browser.browserContext.ctx, 
+		WithErrorf(log.Printf), //WithErrorf, WithDebugf
+	)
 
 	return
 }
@@ -307,11 +309,12 @@ func (b *Browser) report(url string, deadline time.Duration) (report *Report, er
 	}
 
 	// Allocate a free tab from the pool of the browser tabs
-	tabContext, err := b.poolOfBrowserTabs.pop()
+	tabContext, err := NewContext(b.browserTab.ctx, 
+		WithErrorf(log.Printf), //WithErrorf, WithDebugf)
 	if err != nil {
 		return report, fmt.Errorf("Too many tabs already")
 	}
-	defer b.poolOfBrowserTabs.push(tabContext)
+	defer tabContext.cancel()
 
 	eventListener := &eventListener{
 		requests:  map[network.RequestID]*Request{},
