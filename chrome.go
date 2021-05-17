@@ -126,6 +126,7 @@ type Reports struct {
 	Elapsed       int64     `json:"elapsed"`
 	TransactionID string    `json:"transaction_id"`
 	URLs          []string  `json:"urls"`
+	Errors        string    `json:"errors"`
 }
 
 func (r *Reports) toJSON(pretty bool) (s []byte) {
@@ -384,15 +385,24 @@ func (b *Browser) AsyncReports(transactionID string, urls []string, deadline tim
 		URLs:          urls,
 	}
 
+	processedURLs := map[string]struct{}{}
 	for i := 0; i < urlsCount; i++ {
 		select {
 		case report := <-reportsCh:
 			reports.URLReports = append(reports.URLReports, report)
+			processedURLs[report.URL] = struct{}{}
 			log.Printf("Report is completed for transactionID %s url %s, %d ms", transactionID, report.URL, report.Elapsed)
 			continue
 		case <-time.After(deadline):
 			break
 		}
+	}
+
+	for _, url := range reports.URLs {
+		if _, ok := processedURLs[url]; ok {
+			continue
+		}
+		reports.Errors += reports.Errors + fmt.Sprintf("URL %s hist deadline. ", url)
 	}
 
 	// Drop the remaining URLs, close the channel
