@@ -26,19 +26,20 @@ func randomFilename(l int) string {
 }
 
 func dumpFile(base64String, dumpFilename, extension string) {
-	data := []byte{}
-	_, err := base64.StdEncoding.Decode(data, []byte(base64String))
+	data, err :=  base64.StdEncoding.DecodeString( base64String)
 	if err != nil {
 		log.Fatalf("Failed to decode %v %v", extension, err)
 		return
 	}
 
-	filename := dumpFilename + "." + randomFilename(4) + extension
+	filename := dumpFilename + "." + randomFilename(4) + "." + extension
 	file, err := os.Create(filename)
 	defer file.Close()
+
 	if err != nil {
 		log.Fatalf("Failed to open %v %v", filename, err)
 	}
+
 	file.Write(data)
 }
 
