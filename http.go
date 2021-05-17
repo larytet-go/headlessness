@@ -17,14 +17,14 @@ type HTTPHandler struct {
 
 func (h *HTTPHandler) _400(w http.ResponseWriter, err error) {
 	w.Header().Set("Content-Type", "text/plain")
-	log.Printf(err.Error())
+	log.Print(err.Error())
 	w.WriteHeader(http.StatusBadRequest)
 	w.Write([]byte(err.Error()))
 }
 
 func (h *HTTPHandler) _500(w http.ResponseWriter, err error) {
 	w.Header().Set("Content-Type", "text/plain")
-	log.Printf(err.Error())
+	log.Print(err.Error())
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Write([]byte(err.Error()))
 }
@@ -35,7 +35,7 @@ func (h *HTTPHandler) sendReport(w http.ResponseWriter, reports *chrome.Reports)
 	count, err := w.Write(reports.ToJSON(true))
 	if err != nil {
 		err := fmt.Errorf("Failed to write report for transactionID=%s url=%v to the peer : %v, count=%d", reports.TransactionID, reports.URLs, err, count)
-		log.Printf(err.Error())
+		log.Print(err.Error())
 	}
 }
 
