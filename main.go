@@ -69,10 +69,10 @@ func dumpReports(dumpFilename string) {
 func main() {
 	var parseReport bool
 	var dumpFilename string
-	flag.IntVar(&parseReport, "parseReport", false, "parse JSON report")
-	flag.IntVar(&dumpFilename, "dumpFilename", "", "filename of the dump")
+	flag.BoolVar(&parseReport, "parseReport", false, "parse JSON report")
+	flag.StringVar(&dumpFilename, "dumpFilename", "", "filename of the dump")
 	flag.Parse()
-	if parseReport != "" {
+	if parseReport {
 		dumpReports(dumpFilename)
 		return
 	}
