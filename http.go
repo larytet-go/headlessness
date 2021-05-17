@@ -70,10 +70,8 @@ func getURLs(r *http.Request) (urls []string, err error) {
 	defer r.Body.Close()
 
 	urls = []string{}
+	urlsEncoded := []string{}
 	urlsEncoded, ok := r.URL.Query()["url"]
-	if !ok {
-		return
-	}
 	for _, urlEncoded := range urlsEncoded {
 		var urlDecoded string
 		urlDecoded, err = url.QueryUnescape(urlEncoded)
@@ -88,7 +86,7 @@ func getURLs(r *http.Request) (urls []string, err error) {
 	}
 
 	reportPayload := &ReportPayload{}
-	err := json.NewDecoder(r.Body).Decode(reportPayload)
+	err = json.NewDecoder(r.Body).Decode(reportPayload)
 	if err != nil {
 		err = fmt.Errorf("Failed to decode JSON payload: %v", err)
 		return
