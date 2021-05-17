@@ -91,11 +91,20 @@ func (h *HTTPHandler) report(w http.ResponseWriter, r *http.Request) {
 	}
 
 	urlsCount := len(urls)
-	if urlsCount+activeTabs > maxURLs {
-		err := fmt.Errorf("Too many 'url' parameters in %v, max is %d, active tabs %d", r.URL.RawQuery, maxURLs, activeTabs)
+	if urlsCount > maxURLs {
+		err := fmt.Errorf("Too many 'url' parameters in %v, max is %d", r.URL.RawQuery, maxURLs)
 		h._400(w, err)
 		return
 	}
+
+	if urlsCount+activeTabs > maxURLs {
+		err := fmt.Errorf("Too many active tabs: max is %d, active tabs %d", maxURLs, activeTabs)
+		// Slow down the peer a bit
+		time.Sleep(1 * time.Second)
+		h._500(w, err)
+		return
+	}
+
 	if urlsCount == 0 {
 		err := fmt.Errorf("URL is missing in %v", r.URL.RawQuery)
 		h._400(w, err)
