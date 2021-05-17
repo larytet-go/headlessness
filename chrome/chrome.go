@@ -355,7 +355,7 @@ func (b *Browser) report(url string, deadline time.Duration) (report *Report, er
 }
 
 func (b *Browser) close() {
-	b.poolOfBrowserTabs.close()
+	b.browserTab.cancel()
 	b.browserContext.cancel()
 }
 
