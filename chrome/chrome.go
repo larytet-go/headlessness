@@ -310,12 +310,9 @@ func (b *Browser) report(url string, deadline time.Duration) (report *Report, er
 
 	tabContext := contextWithCancel{}
 	// Allocate a free tab from the pool of the browser tabs
-	tabContext.ctx, tabContext.cancel := NewContext(b.browserTab.ctx, 
+	tabContext.ctx, tabContext.cancel = NewContext(b.browserTab.ctx, 
 		WithErrorf(log.Printf), //WithErrorf, WithDebugf)
 	)
-	if err != nil {
-		return report, fmt.Errorf("Too many tabs already")
-	}
 	defer tabContext.cancel()
 
 	eventListener := &eventListener{
