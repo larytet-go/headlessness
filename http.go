@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/larytet-go/headlessness/chrome"
+	"headlessness/chrome"
 )
 
 type HTTPHandler struct {
