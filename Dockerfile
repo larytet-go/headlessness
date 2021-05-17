@@ -26,7 +26,7 @@ COPY go.* ./
 RUN go mod download
 RUN cat go.mod
 
-COPY *.go .
+COPY *.go ./
 RUN GOOS=linux CGO_ENABLED=1 GOARCH=amd64 go build -a -o . ./
 
 ########################################

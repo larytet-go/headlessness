@@ -8,9 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
-	"net/url"
-	"strconv"
 	"sync"
 	"time"
 
@@ -359,7 +356,7 @@ func (b *Browser) close() {
 
 func (b *Browser) asyncReport(transactionID string, url string, result chan *Report, deadline time.Duration) {
 	startTime := time.Now()
-	report, err := h.browser.report(url, deadline)
+	report, err := b.report(url, deadline)
 	if err != nil {
 		err := fmt.Errorf("Failed to fetch URL %v: %v", url, err)
 		log.Printf(err.Error())
@@ -377,7 +374,7 @@ func (b *Browser) AsyncReports(transactionID string, urls []string, deadline tim
 	reportsCh := make(chan *Report, urlsCount)
 
 	for _, url := range urls {
-		go bh.asyncReport(transactionIDurl, reportsCh, deadline)
+		go b.asyncReport(transactionID, url, reportsCh, deadline)
 	}
 
 	reports = &Reports{

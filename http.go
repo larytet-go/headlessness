@@ -1,5 +1,18 @@
 package main
 
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"net/url"
+	"strconv"
+	"sync"
+	"time"
+)
+
 type HTTPHandler struct {
 	browser *Browser
 }
