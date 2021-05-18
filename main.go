@@ -112,7 +112,7 @@ func commandLineMode() bool {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	if commandLineMode(browser) {
+	if commandLineMode() {
 		return
 	}
 
