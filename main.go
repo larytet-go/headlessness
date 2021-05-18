@@ -68,7 +68,7 @@ func dumpReports(dumpFilename string) {
 	}
 }
 
-func commandLineMode(browser *chrome.Browser) bool {
+func commandLineMode() bool {
 
 	var parseReport bool
 	var dumpFilename string
@@ -90,8 +90,7 @@ func commandLineMode(browser *chrome.Browser) bool {
 	if url != "" {
 		browser, err := chrome.New()
 		if err != nil {
-			log.Printf(err.Error())
-			return
+			log.Fatalf("Failed to start a browste %v %v", err)
 		}
 
 		report, err := browser.Report(url, 30*time.Second)
