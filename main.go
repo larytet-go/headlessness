@@ -52,7 +52,7 @@ func dumpReports(dumpFilename string) {
 	reports := &chrome.Reports{}
 	err := json.NewDecoder(os.Stdin).Decode(reports)
 	if err != nil {
-		log.Fatalf("Failed to decode the JSON %v %v", err)
+		log.Fatalf("Failed to decode the JSON %v", err)
 		return
 	}
 	if dumpFilename == "" {
@@ -92,7 +92,12 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to fetch %v %v", url, err)
 		}
-		log.Print(string(report.ToJSON(true)))
+		reports := &chrome.Reports{
+			Count:      1,
+			URLReports: []*chrome.Report{report},
+			URLs:       []string{url},
+		}
+		fmt.Print(string(reports.ToJSON(true)))
 		return
 	}
 
