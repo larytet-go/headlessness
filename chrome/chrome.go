@@ -108,17 +108,18 @@ type Request struct {
 }
 
 type Report struct {
-	URL           string    `json:"url"`
-	TransactionID string    `json:"transaction_id"`
-	RequestID     string    `json:"request_id"`
-	Requests      []Request `json:"requests"`
-	Redirects     []string  `json:"redirects"`
-	SlowResponses []string  `json:"slow_responses"`
-	Ads           []string  `json:"ads"`
-	Screenshot    string    `json:"screenshot"`
-	Content       string    `json:"content"`
-	Errors        string    `json:"errors"`
-	Elapsed       int64     `json:"elapsed"`
+	URL             string    `json:"url"`
+	TransactionID   string    `json:"transaction_id"`
+	RequestID       string    `json:"request_id"`
+	Requests        []Request `json:"requests"`
+	Redirects       []string  `json:"redirects"`
+	SlowResponses   []string  `json:"slow_responses"`
+	Ads             []string  `json:"ads"`
+	Screenshot      string    `json:"screenshot"`
+	Content         string    `json:"content"`
+	Errors          string    `json:"errors"`
+	Elapsed         int64     `json:"elapsed"`
+	RequestsElapsed int64     `json:"requests_elapsed"`
 }
 
 func (r *Report) ToJSON(pretty bool) (s []byte) {
@@ -439,6 +440,20 @@ func (b *Browser) asyncReport(transactionID string, url string, result chan *Rep
 	report.TransactionID = transactionID
 	report.URL = url
 	report.Elapsed = time.Since(startTime).Milliseconds()
+
+	maxTime := time.Now().Add(-deadline)
+	minTime := time.Now()
+	for _, request := range report.Requests {
+		if request.TSRequest.Before(minTime) {
+			minTime = request.TSRequest
+		}
+		if request.TSResponse.After(maxTime) {
+			maxTime = request.TSRequest
+		}
+	}
+	if len(report.Requests) > 0 {
+		report.RequestsElapsed = int64(maxTime.Sub(minTime) / time.Millisecond)
+	}
 	result <- report
 }
 
