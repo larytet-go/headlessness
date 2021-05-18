@@ -9,7 +9,11 @@ Headlessness is an HTTP service wrapping the [ChromeDP](https://github.com/chrom
 # go fmt .
 docker build -t headlessness .
 docker run --shm-size 2G --rm -p 5900:5900 -p 8081:8081 --init headlessness
-curl --silent --data '{"urls":["https://www.google.com/", "https://www.google.com/search?q=test1", "https://www.google.com/search?q=test2"]}' "http://0.0.0.0:8081/fetch?deadline=3000&transaction_id=1&"
+curl --silent --data '{"urls":["https://www.google.com/", "https://www.google.com/search?q=test1", "https://www.google.com/search?q=test2"]}' "http://0.0.0.0:8081/fetch?deadline=3000&transaction_id=1"
+
+curl --silent -X POST "http://0.0.0.0:8081/fetch?url=https%253A%252F%252Fmeyerweb.com%252Feric%252Ftools%252Fdencoder%252F&deadline=3000&transaction_id=1"
+
+
 ```
 
 A single URL from the command line

@@ -68,8 +68,8 @@ func dumpReports(dumpFilename string) {
 	}
 }
 
-func main() {
-	rand.Seed(time.Now().UnixNano())
+func commandLineMode(browser *chrome.Browser) bool {
+
 	var parseReport bool
 	var dumpFilename string
 	var url string
@@ -77,15 +77,14 @@ func main() {
 	flag.StringVar(&dumpFilename, "dumpFilename", "", "filename of the dump")
 	flag.StringVar(&url, "url", "", "Qucik fetch for a URL, no URL encoding is required")
 	flag.Parse()
-	if parseReport {
-		dumpReports(dumpFilename)
-		return
+
+	if !parseReport && url != ""{
+		return false
 	}
 
-	browser, err := chrome.New()
-	if err != nil {
-		log.Printf(err.Error())
-		return
+	if parseReport {
+		dumpReports(dumpFilename)
+		return true
 	}
 
 	if url != "" {
@@ -99,6 +98,22 @@ func main() {
 			URLs:       []string{url},
 		}
 		fmt.Print(string(reports.ToJSON(true)))
+		return true
+	}
+
+	return true
+}
+
+func main() {
+	rand.Seed(time.Now().UnixNano())
+
+	browser, err := chrome.New()
+	if err != nil {
+		log.Printf(err.Error())
+		return
+	}
+
+	if commandLineMode(browser) {
 		return
 	}
 
