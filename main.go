@@ -74,13 +74,12 @@ func main() {
 	var url string
 	flag.BoolVar(&parseReport, "parseReport", false, "parse JSON report")
 	flag.StringVar(&dumpFilename, "dumpFilename", "", "filename of the dump")
-	flag.StringVar(&dumpFilename, "url", "", "Qucik fetch for a URL, no URL encoding is required")
+	flag.StringVar(&url, "url", "", "Qucik fetch for a URL, no URL encoding is required")
 	flag.Parse()
 	if parseReport {
 		dumpReports(dumpFilename)
 		return
 	}
-
 
 	browser, err := chrome.New()
 	if err != nil {

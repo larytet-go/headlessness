@@ -15,7 +15,7 @@ curl --silent --data '{"urls":["https://www.google.com/", "https://www.google.co
 A single URL from the command line
 
 ``` 
-docker run --shm-size 2G --rm -p 5900:5900 -p 8081:8081 --init headlessness -url "https://www.google.com/search?q=test1"
+docker run --shm-size 2G --rm -p 5900:5900 -p 8081:8081 --init --entrypoint=""  headlessness  /home/chrome/headlessness  -url="https://www.google.com/search?q=test1"
 ```
 
 Try VNC 127.0.0.1:5900
