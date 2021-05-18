@@ -24,7 +24,9 @@ type adBlockList struct {
 }
 
 func NewAdBlockList(filenames []string) (AdBlockIfc, error) {
-	adBlockList := &adBlockList{}
+	adBlockList := &adBlockList{
+		blockList: map[string]struct{}{},
+	}
 	err := adBlockList.load(filenames)
 	if err != nil {
 		return &AdBlockDummy{}, err
@@ -33,7 +35,6 @@ func NewAdBlockList(filenames []string) (AdBlockIfc, error) {
 }
 
 func (ab *adBlockList) load(filenames []string) error {
-	blockList := map[string]struct{}{}
 	for _, filename := range filenames {
 		count := 0
 		file, err := os.Open(filename)
@@ -52,7 +53,7 @@ func (ab *adBlockList) load(filenames []string) error {
 			if ip != "0.0.0.0" {
 				continue
 			}
-			blockList[strings.TrimSpace(columns[1])] = struct{}{}
+			ab.blockList[strings.TrimSpace(columns[1])] = struct{}{}
 			count++
 		}
 		if err := scanner.Err(); err != nil {

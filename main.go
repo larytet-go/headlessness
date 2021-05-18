@@ -68,6 +68,7 @@ func dumpReports(dumpFilename string) {
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 	var parseReport bool
 	var dumpFilename string
 	flag.BoolVar(&parseReport, "parseReport", false, "parse JSON report")

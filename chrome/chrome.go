@@ -8,14 +8,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/dom"
+	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/cdproto/network"
-	//"github.com/chromedp/cdproto/page"
 	. "github.com/chromedp/chromedp"
 )
 
@@ -100,6 +102,7 @@ type Request struct {
 	Status       int64     `json:"status"`
 	ResponseData []byte    `json:"response_data"`
 	FromCache    bool      `json:"from_cache"`
+	IsAd         bool      `json:"is_ad"`
 }
 
 type Report struct {
@@ -231,6 +234,8 @@ type eventListener struct {
 	redirects []string
 	requests  map[network.RequestID]*Request
 	mutex     sync.Mutex
+	ctx       context.Context
+	adBlock   AdBlockIfc
 }
 
 func (el *eventListener) addDocumentURL(url string) {
@@ -251,22 +256,27 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	now := time.Now()
 	documentURL := r.DocumentURL
 	requestID := r.RequestID
-	url := r.Request.URL
+	requestURL := r.Request.URL
+
+	isAd := false
+
+	redirectResponse := r.RedirectResponse
 
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
 
-	redirectResponse := r.RedirectResponse
 	if request, ok := el.requests[requestID]; ok && redirectResponse == nil {
-		log.Printf("Request %s [%s]  already is in the map for url %s: request=%v, event=%v", url, requestID, documentURL, request, r)
+		log.Printf("Request %s [%s] already is in the map for url %s: request=%v, event=%v", requestURL, requestID, documentURL, request, r)
 	}
 	if redirectResponse != nil {
 		el.redirects = append(el.redirects, redirectResponse.URL)
 	}
+
 	// log.Printf("Add request %s [%s]", url, requestID)
 	el.requests[requestID] = &Request{
-		URL:       r.Request.URL,
+		URL:       requestURL,
 		TSRequest: now,
+		IsAd:      isAd,
 	}
 }
 
@@ -303,6 +313,45 @@ func (el *eventListener) requestServedFromCache(r *network.EventRequestServedFro
 	request.TSResponse = now
 }
 
+func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
+	log.Printf("fetch.FailRequest called")
+	chromedpContext := FromContext(el.ctx)
+	execCtx := cdp.WithExecutor(el.ctx, chromedpContext.Target)
+
+	requestURL := ev.Request.URL
+	u, err := url.Parse(requestURL)
+	requestID := (ev.RequestID)
+	if err != nil {
+		log.Printf("fetch.FailRequest failed to parse %v v", requestURL, err)
+		err := fetch.ContinueRequest(requestID).Do(execCtx)
+		if err != nil {
+			log.Printf("fetch.FailRequest for url %v %v", requestURL, err)
+		}
+		return
+	}
+
+	if el.adBlock.IsAd(u.Host) {
+		el.mutex.Lock()
+		if request, ok := el.requests[network.RequestID(requestID)]; ok {
+			request.IsAd = true
+		} else {
+			log.Printf("fetch.FailRequest request %s [%s] is missing in the map", requestURL, requestID)
+		}
+		el.mutex.Unlock()
+		err := fetch.FailRequest(requestID, network.ErrorReasonFailed).Do(execCtx)
+		if err != nil {
+			log.Printf("fetch.FailRequest for url %v %v", requestURL, err)
+		}
+		return
+	}
+
+	err = fetch.ContinueRequest(requestID).Do(execCtx)
+	if err != nil {
+		log.Printf("fetch.FailRequest for url %v %v", requestURL, err)
+	}
+
+}
+
 func (el *eventListener) dumpCollectedRequests() (requests []Request) {
 	requests = []Request{}
 	el.mutex.Lock()
@@ -331,6 +380,8 @@ func (b *Browser) report(url string, deadline time.Duration) (report *Report, er
 		requests:  map[network.RequestID]*Request{},
 		redirects: []string{},
 		urls:      map[string]struct{}{},
+		ctx:       tabContext.ctx,
+		adBlock:   b.adBlock,
 	}
 	defer eventListener.removeDocumentURL(url)
 	eventListener.addDocumentURL(url)
