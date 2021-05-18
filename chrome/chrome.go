@@ -99,6 +99,7 @@ type Request struct {
 	URL          string    `json:"url"`
 	TSRequest    time.Time `json:"ts_request"`
 	TSResponse   time.Time `json:"ts_respons"`
+	Elapsed      int       `json:"elapsed"`
 	Status       int64     `json:"status"`
 	ResponseData []byte    `json:"response_data"`
 	FromCache    bool      `json:"from_cache"`
@@ -295,6 +296,7 @@ func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
 	request := el.requests[requestID]
 	request.Status = r.Response.Status
 	request.TSResponse = now
+	request.Elapsed = int(time.Since(request.TSRequest) / time.Millisecond)
 }
 
 func (el *eventListener) requestServedFromCache(r *network.EventRequestServedFromCache) {
