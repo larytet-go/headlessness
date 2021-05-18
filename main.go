@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
