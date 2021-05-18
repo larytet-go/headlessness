@@ -78,7 +78,7 @@ func commandLineMode(browser *chrome.Browser) bool {
 	flag.StringVar(&url, "url", "", "Qucik fetch for a URL, no URL encoding is required")
 	flag.Parse()
 
-	if !parseReport && url != ""{
+	if !parseReport && url != "" {
 		return false
 	}
 
@@ -88,6 +88,12 @@ func commandLineMode(browser *chrome.Browser) bool {
 	}
 
 	if url != "" {
+		browser, err := chrome.New()
+		if err != nil {
+			log.Printf(err.Error())
+			return
+		}
+
 		report, err := browser.Report(url, 30*time.Second)
 		if err != nil {
 			log.Fatalf("Failed to fetch %v %v", url, err)
@@ -107,13 +113,13 @@ func commandLineMode(browser *chrome.Browser) bool {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	browser, err := chrome.New()
-	if err != nil {
-		log.Printf(err.Error())
+	if commandLineMode(browser) {
 		return
 	}
 
-	if commandLineMode(browser) {
+	browser, err := chrome.New()
+	if err != nil {
+		log.Printf(err.Error())
 		return
 	}
 
