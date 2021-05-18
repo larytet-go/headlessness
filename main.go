@@ -71,17 +71,29 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	var parseReport bool
 	var dumpFilename string
+	var url string
 	flag.BoolVar(&parseReport, "parseReport", false, "parse JSON report")
 	flag.StringVar(&dumpFilename, "dumpFilename", "", "filename of the dump")
+	flag.StringVar(&dumpFilename, "url", "", "Qucik fetch for a URL, no URL encoding is required")
 	flag.Parse()
 	if parseReport {
 		dumpReports(dumpFilename)
 		return
 	}
 
+
 	browser, err := chrome.New()
 	if err != nil {
 		log.Printf(err.Error())
+		return
+	}
+
+	if url != "" {
+		report, err := browser.Report(url, 30*time.Second)
+		if err != nil {
+			log.Fatalf("Failed to fetch %v %v", url, err)
+		}
+		log.Print(string(report.ToJSON(true)))
 		return
 	}
 

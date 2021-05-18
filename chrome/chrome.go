@@ -119,7 +119,7 @@ type Report struct {
 	Elapsed       int64     `json:"elapsed"`
 }
 
-func (r *Report) toJSON(pretty bool) (s []byte) {
+func (r *Report) ToJSON(pretty bool) (s []byte) {
 	if pretty {
 		s, _ = json.MarshalIndent(r, "", "\t")
 	} else {
@@ -362,7 +362,7 @@ func (el *eventListener) dumpCollectedRequests() (requests []Request) {
 	return
 }
 
-func (b *Browser) report(url string, deadline time.Duration) (report *Report, err error) {
+func (b *Browser) Report(url string, deadline time.Duration) (report *Report, err error) {
 	atomic.AddInt64(&b.ActiveTabs, 1)
 	defer atomic.AddInt64(&b.ActiveTabs, -1)
 	report = &Report{URL: url,
@@ -425,7 +425,7 @@ func (b *Browser) close() {
 func (b *Browser) asyncReport(transactionID string, url string, result chan *Report, deadline time.Duration) {
 
 	startTime := time.Now()
-	report, err := b.report(url, deadline)
+	report, err := b.Report(url, deadline)
 	if err != nil {
 		err := fmt.Errorf("Failed to fetch URL %v: %v", url, err)
 		log.Printf(err.Error())
