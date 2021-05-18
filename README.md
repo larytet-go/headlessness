@@ -27,6 +27,11 @@ Try VNC 127.0.0.1:5900
 remmina -c $PWD/local-chrome.remmina
 ```
 
+End to end test 
+```
+clear && go fmt . && go fmt ./chrome/.&& GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -a -o . ./  && docker build -t headlessness . && docker run  --shm-size 2G  -p 5900:5900 -p 8081:8081 --init --entrypoint=""  headlessness  /home/chrome/headlessness  -url="https://www.google.com/search?q=test1" | ./headlessness -parseReport=true -dumpFilename=google3
+```
+
 ### Report dump tool
 
 ```
