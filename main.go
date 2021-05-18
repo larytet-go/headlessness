@@ -78,7 +78,7 @@ func commandLineMode() bool {
 	flag.StringVar(&url, "url", "", "Qucik fetch for a URL, no URL encoding is required")
 	flag.Parse()
 
-	if !parseReport && url != "" {
+	if !parseReport && url == "" {
 		return false
 	}
 
