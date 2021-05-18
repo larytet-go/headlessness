@@ -104,6 +104,7 @@ type Request struct {
 	ResponseData []byte    `json:"response_data"`
 	FromCache    bool      `json:"from_cache"`
 	IsAd         bool      `json:"is_ad"`
+	SlowHost     bool      `json:"slow_host"`
 }
 
 type Report struct {
@@ -297,6 +298,7 @@ func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
 	request.Status = r.Response.Status
 	request.TSResponse = now
 	request.Elapsed = int(time.Since(request.TSRequest) / time.Millisecond)
+	request.SlowHost = request.Elapsed > 1000
 }
 
 func (el *eventListener) requestServedFromCache(r *network.EventRequestServedFromCache) {
