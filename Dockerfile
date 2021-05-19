@@ -91,7 +91,14 @@ RUN apt-get install -y --no-install-recommends \
 	libappindicator1 \
 	libnss3 \
 	lsb-release \
-	xdg-utils
+	xdg-utils \
+	fonts-ipafont-gothic \
+	fonts-wqy-zenhei \    
+	fonts-thai-tlwg \
+	fonts-kacst \
+	fonts-symbola \
+	fonts-noto \
+	fonts-freefont-ttf
 
 # Install XVFB if there's a need to run browsers in headful mode
 RUN apt-get install -y --no-install-recommends \
@@ -120,7 +127,6 @@ RUN curl https://raw.githubusercontent.com/larytet-py/ads_hosts/master/hosts.txt
 COPY --from=dev /home/chrome/go/src/headlessness/headlessness .
 # Run everything after as non-privileged user.
 USER chrome
-
 
 COPY start.sh .
 ENTRYPOINT ["dumb-init", "--", "./start.sh"]
