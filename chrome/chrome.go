@@ -238,9 +238,9 @@ func fullScreenshot(ch chan []byte) EmulateAction {
 			}
 			// capture screenshot
 			screenshot, err = page.CaptureScreenshot().
-			WithClip(&page.Viewport{
-				WithQuality(int64(50)).
-					X:      contentSize.X,
+				WithClip(&page.Viewport{
+					WithQuality(int64(50)).
+						X: contentSize.X,
 					Y:      contentSize.Y,
 					Width:  contentSize.Width,
 					Height: contentSize.Height,
@@ -281,17 +281,7 @@ func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors 
 			},
 		}),
 		Navigate(urlstr),
-		ActionFunc(func(ctx context.Context) error {
-			fmt.Printf("Navigate took %v\n", time.Since(now))
-			now = time.Now()
-			return nil
-		}),
 		fullScreenshot(screenshotCh),
-		ActionFunc(func(ctx context.Context) error {
-			fmt.Printf("FullScreenshot page took %v\n", time.Since(now))
-			now = time.Now()
-			return nil
-		}),
 		// https://github.com/chromedp/chromedp/blob/master/example_test.go
 		// https://github.com/chromedp/examples/blob/master/subtree/main.go
 		// https://github.com/chromedp/chromedp/issues/128
