@@ -208,8 +208,19 @@ func New() (browser *Browser, err error) {
 	return
 }
 
+func fullScreenshot(ch chan []byte) chromedp.Action {
+	screenshot []byte
+	fullScreenshotAction := FullScreenshot(50, &screenshot)
+	return ActionFunc(func(ctx context.Context) error {
+		go func(){
+			fullScreenshotAction(ctx) 
+			ch <- screenshot
+		}()
+	}
+}
+
 // Return actions scrapping a WEB page, collecting HTTP requests
-func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *string) Tasks {
+func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors *string) Tasks {
 	now := time.Now()
 	quality := 10
 
@@ -447,12 +458,20 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 		}
 	})
 
-	var screenshot []byte
+	screenshotCh := make(chan []byte, 1)
 	var content string
 	var errors string
-	if err = Run(tabContext.ctx, scrapPage(url, &screenshot, &content, &errors)); err != nil {
+	if err = Run(tabContext.ctx, scrapPage(url, screenshotCh, &content, &errors)); err != nil {
 		return
 	}
+
+	select {
+	case screenshot := <-screenshotCh:
+		break
+	case <-time.After(deadline):
+		break
+	}
+
 	report.Screenshot = base64.StdEncoding.EncodeToString(screenshot)
 	report.Content = base64.StdEncoding.EncodeToString([]byte(content))
 	report.Errors = errors
