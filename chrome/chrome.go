@@ -211,7 +211,7 @@ func New() (browser *Browser, err error) {
 // Return actions scrapping a WEB page, collecting HTTP requests
 func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *string) Tasks {
 	now := time.Now()
-	quality := 50
+	quality := 10
 
 	return Tasks{
 		network.Enable(),
@@ -241,7 +241,7 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 		}),
 		FullScreenshot(screenshot, quality),
 		ActionFunc(func(ctx context.Context) error {
-			fmt.Printf("FullScreenshot took %v\n", time.Since(now))
+			fmt.Printf("FullScreenshot page took %v\n", time.Since(now))
 			now = time.Now()
 			return nil
 		}),
@@ -260,11 +260,6 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 			if err != nil {
 				*errors += "Content:" + err.Error() + ". "
 			}
-			return nil
-		}),
-		ActionFunc(func(ctx context.Context) error {
-			fmt.Printf("GetDocument took %v\n", time.Since(now))
-			now = time.Now()
 			return nil
 		}),
 	}
