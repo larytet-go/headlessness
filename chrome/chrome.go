@@ -238,9 +238,9 @@ func fullScreenshot(ch chan []byte) EmulateAction {
 			}
 			// capture screenshot
 			screenshot, err = page.CaptureScreenshot().
+				WithQuality(10).
 				WithClip(&page.Viewport{
-					WithQuality(int64(50)).
-						X: contentSize.X,
+					X:      contentSize.X,
 					Y:      contentSize.Y,
 					Width:  contentSize.Width,
 					Height: contentSize.Height,
@@ -258,8 +258,6 @@ func fullScreenshot(ch chan []byte) EmulateAction {
 
 // Return actions scrapping a WEB page, collecting HTTP requests
 func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors *string) Tasks {
-	now := time.Now()
-
 	return Tasks{
 		network.Enable(),
 		fetch.Enable().WithPatterns([]*fetch.RequestPattern{
