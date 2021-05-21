@@ -523,7 +523,6 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 	var webPageCategory string
 	select {
 	case webPageCategory = <-webPageCategoryCh:
-		log.Printf("Got webPageCategory %s", webPageCategory)
 		break
 	case screenshot = <-screenshotCh:
 		break
