@@ -411,7 +411,7 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 		resourceType == network.ResourceTypeXHR ||
 		resourceType == network.ResourceTypeMedia
 
-	el.webPageMetrics.incMetric(network.ResourceTypeMedia)
+	el.webPageMetrics.incMetric(resourceType)
 
 	// https://stackoverflow.com/questions/5216831/can-we-measure-complexity-of-web-site/13674590#13674590
 	// https://web.eecs.umich.edu/~harshavm/papers/imc11.pdf
