@@ -97,6 +97,7 @@ type Browser struct {
 	browserTab     contextWithCancel
 	ActiveTabs     int64
 	adBlock        AdBlockIfc
+	skipCategory   map[string]struct{}
 }
 
 type Request struct {
@@ -113,6 +114,10 @@ type Request struct {
 	Blocked      bool                 `json:"blocked"`
 }
 
+const (
+	WebPageCategoryMedia = "Media"
+)
+
 type Report struct {
 	URL             string    `json:"url"`
 	TransactionID   string    `json:"transaction_id"`
@@ -127,6 +132,7 @@ type Report struct {
 	Elapsed         int64     `json:"elapsed"`
 	RequestsElapsed int64     `json:"requests_elapsed"`
 	WebPageCategory string    `json:"web_page_category"`
+	SkipCategory    bool      `json:"skip_category"`
 }
 
 func (r *Report) ToJSON(pretty bool) (s []byte) {
@@ -189,14 +195,20 @@ func getChromeOpions() []ExecAllocatorOption {
 	}
 }
 
-func New() (browser *Browser, err error) {
+func New(skipCategory []string) (browser *Browser, err error) {
 	maxTabs := runtime.NumCPU()
-	browser = &Browser{MaxTabs: maxTabs}
+	browser = &Browser{
+		MaxTabs:      maxTabs,
+		skipCategory: map[string]struct{}{},
+	}
 
 	// https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
 	opts := getChromeOpions()
 	browser.browserContext.ctx, browser.browserContext.cancel = NewExecAllocator(context.Background(), opts...)
 
+	for _, category := range skipCategory {
+		browser.skipCategory[category] = struct{}{}
+	}
 	// create contexts
 	// https://github.com/chromedp/chromedp/issues/821
 	browser.browserTab.ctx, browser.browserTab.cancel = NewContext(browser.browserContext.ctx,
@@ -357,7 +369,7 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 	}
 
 	if el.webPageCategory == "" && (el.mediaFiles > 1 || el.imageFiles > 5) {
-		el.webPageCategory = "media"
+		el.webPageCategory = WebPageCategoryMedia
 		el.webPageCategoryCh <- el.webPageCategory
 	}
 
@@ -524,7 +536,10 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 	var webPageCategory string
 	select {
 	case webPageCategory = <-webPageCategoryCh:
-		break
+		if _, skipCategory := b.skipCategory[webPageCategory]; skipCategory {
+			report.SkipCategory = true
+			break
+		}
 	case screenshot = <-screenshotCh:
 		break
 	case <-time.After(deadline):
