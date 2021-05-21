@@ -255,13 +255,23 @@ func (el *eventListener) removeDocumentURL(url string) {
 	delete(el.urls, url)
 }
 
+func (el *eventListener) failRequest(requestURL string, requestID network.RequestID) {
+	chromedpContext := FromContext(el.ctx)
+	execCtx := cdp.WithExecutor(el.ctx, chromedpContext.Target)
+	err := fetch.FailRequest(fetch.RequestID(requestID), network.ErrorReasonFailed).Do(execCtx)
+	if err != nil {
+		log.Printf("fetch.FailRequest for url %v %v", requestURL, err)
+	}
+
+}
 func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	now := time.Now()
 	documentURL := r.DocumentURL
 	requestID := r.RequestID
 	requestURL := r.Request.URL
 
-	isAd := false
+	u, err := url.Parse(requestURL)
+	isAd := err == nil && el.adBlock.IsAd(u.Host)
 
 	redirectResponse := r.RedirectResponse
 
@@ -280,6 +290,9 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 		URL:       requestURL,
 		TSRequest: now,
 		IsAd:      isAd,
+	}
+	if isAd{
+		go el.failRequest(requestURL, requestID)
 	}
 }
 
@@ -316,45 +329,6 @@ func (el *eventListener) requestServedFromCache(r *network.EventRequestServedFro
 	request := el.requests[requestID]
 	request.FromCache = true
 	request.TSResponse = now
-}
-
-func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
-	log.Printf("fetch.FailRequest called")
-	chromedpContext := FromContext(el.ctx)
-	execCtx := cdp.WithExecutor(el.ctx, chromedpContext.Target)
-
-	requestURL := ev.Request.URL
-	u, err := url.Parse(requestURL)
-	requestID := (ev.RequestID)
-	if err != nil {
-		log.Printf("fetch.FailRequest failed to parse %v v", requestURL, err)
-		err := fetch.ContinueRequest(requestID).Do(execCtx)
-		if err != nil {
-			log.Printf("fetch.FailRequest for url %v %v", requestURL, err)
-		}
-		return
-	}
-
-	if el.adBlock.IsAd(u.Host) {
-		el.mutex.Lock()
-		if request, ok := el.requests[network.RequestID(requestID)]; ok {
-			request.IsAd = true
-		} else {
-			log.Printf("fetch.FailRequest request %s [%s] is missing in the map", requestURL, requestID)
-		}
-		el.mutex.Unlock()
-		err := fetch.FailRequest(requestID, network.ErrorReasonFailed).Do(execCtx)
-		if err != nil {
-			log.Printf("fetch.FailRequest for url %v %v", requestURL, err)
-		}
-		return
-	}
-
-	err = fetch.ContinueRequest(requestID).Do(execCtx)
-	if err != nil {
-		log.Printf("fetch.FailRequest for url %v %v", requestURL, err)
-	}
-
 }
 
 func (el *eventListener) dumpCollectedRequests() (requests []Request) {
