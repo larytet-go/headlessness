@@ -210,6 +210,7 @@ func New() (browser *Browser, err error) {
 
 // Return actions scrapping a WEB page, collecting HTTP requests
 func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *string) Tasks {
+	now := time.Now()
 	quality := 50
 
 	return Tasks{
@@ -233,8 +234,17 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 			},
 		}),
 		Navigate(urlstr),
+		ActionFunc(func(ctx context.Context) error {
+			fmt.Printf("Navigate took %v\n", time.Since(now)/time.Millisecond)
+			now = time.Now()
+			return nil
+		}),
 		FullScreenshot(screenshot, quality),
-
+		ActionFunc(func(ctx context.Context) error {
+			fmt.Printf("FullScreenshot took %v\n", time.Since(now)/time.Millisecond)
+			now = time.Now()
+			return nil
+		}),
 		// https://github.com/chromedp/chromedp/blob/master/example_test.go
 		// https://github.com/chromedp/examples/blob/master/subtree/main.go
 		// https://github.com/chromedp/chromedp/issues/128
@@ -250,6 +260,11 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 			if err != nil {
 				*errors += "Content:" + err.Error() + ". "
 			}
+			return nil
+		}),
+		ActionFunc(func(ctx context.Context) error {
+			fmt.Printf("GetDocument took %v\n", time.Since(now)/time.Millisecond)
+			now = time.Now()
 			return nil
 		}),
 	}
@@ -290,21 +305,24 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 	requestURL := ev.Request.URL
 	isAd := el.isAd(requestURL)
 	requestID := (ev.RequestID)
+
 	if isAd {
-		el.mutex.Lock()
-		defer el.mutex.Unlock()
-		if request, ok := el.requests[network.RequestID(requestID)]; ok {
-			request.IsAd = true
-		} else {
-			el.requests[network.RequestID(requestID)] = &Request{
-				URL:       requestURL,
-				TSRequest: now,
-				IsAd:      true,
-			}
-		}
 		go el.failRequest(requestURL, requestID)
 	} else {
 		go el.continueRequest(requestURL, requestID)
+	}
+
+	el.mutex.Lock()
+	defer el.mutex.Unlock()
+
+	if request, ok := el.requests[network.RequestID(requestID)]; ok {
+		request.IsAd = isAd
+	} else {
+		el.requests[network.RequestID(requestID)] = &Request{
+			URL:       requestURL,
+			TSRequest: now,
+			IsAd:      isAd,
+		}
 	}
 }
 
