@@ -355,7 +355,7 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 		el.imageFiles += 1
 	}
 
-	if webPageCategory == "" && (el.mediaFiles > 1 || el.imageFiles > 5) {
+	if el.webPageCategory == "" && (el.mediaFiles > 1 || el.imageFiles > 5) {
 		el.webPageCategory = "media"
 		el.webPageCategoryCh <- el.webPageCategory
 	}
