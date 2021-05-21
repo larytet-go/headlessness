@@ -312,8 +312,9 @@ type eventListener struct {
 	adBlock           AdBlockIfc
 	webPageCategoryCh chan string
 
-	mediaFiles int
-	imageFiles int
+	mediaFiles      int
+	imageFiles      int
+	webPageCategory string
 }
 
 func (el *eventListener) addDocumentURL(url string) {
@@ -354,8 +355,9 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 		el.imageFiles += 1
 	}
 
-	if el.mediaFiles > 1 || el.imageFiles > 5 {
-		el.webPageCategoryCh <- "media"
+	if webPageCategory == "" && (el.mediaFiles > 1 || el.imageFiles > 5) {
+		el.webPageCategory = "media"
+		el.webPageCategoryCh <- el.webPageCategory
 	}
 
 	if blocked {
@@ -522,6 +524,7 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 	select {
 	case webPageCategory = <-webPageCategoryCh:
 		log.Printf("Got webPageCategory %s", webPageCategory)
+		break
 	case screenshot = <-screenshotCh:
 		break
 	case <-time.After(deadline):
