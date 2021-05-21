@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/url"
 	"runtime"
 	"sync"
@@ -16,8 +17,10 @@ import (
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/dom"
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/cdproto/network"
+	"github.com/chromedp/cdproto/page"
 	. "github.com/chromedp/chromedp"
 )
 
@@ -208,10 +211,54 @@ func New() (browser *Browser, err error) {
 	return
 }
 
+// See implementation https://github.com/chromedp/chromedp/blob/master/emulate.go#L129
+func fullScreenshot(ch chan []byte) EmulateAction {
+	screenshot := []byte{}
+	return ActionFunc(func(ctx context.Context) error {
+		go func() {
+			// get layout metrics
+			_, _, contentSize, _, _, cssContentSize, err := page.GetLayoutMetrics().Do(ctx)
+			if err != nil {
+				return
+			}
+			// protocol v90 changed the return parameter name (contentSize -> cssContentSize)
+			if cssContentSize != nil {
+				contentSize = cssContentSize
+			}
+			width, height := int64(math.Ceil(contentSize.Width)), int64(math.Ceil(contentSize.Height))
+			// force viewport emulation
+			err = emulation.SetDeviceMetricsOverride(width, height, 1, false).
+				WithScreenOrientation(&emulation.ScreenOrientation{
+					Type:  emulation.OrientationTypePortraitPrimary,
+					Angle: 0,
+				}).
+				Do(ctx)
+			if err != nil {
+				return
+			}
+			// capture screenshot
+			screenshot, err = page.CaptureScreenshot().
+			WithClip(&page.Viewport{
+				WithQuality(int64(50)).
+					X:      contentSize.X,
+					Y:      contentSize.Y,
+					Width:  contentSize.Width,
+					Height: contentSize.Height,
+					Scale:  1,
+				}).Do(ctx)
+			if err != nil {
+				return
+			}
+			ch <- screenshot
+		}()
+
+		return nil
+	})
+}
+
 // Return actions scrapping a WEB page, collecting HTTP requests
-func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *string) Tasks {
+func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors *string) Tasks {
 	now := time.Now()
-	quality := 10
 
 	return Tasks{
 		network.Enable(),
@@ -239,8 +286,7 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 			now = time.Now()
 			return nil
 		}),
-		// See implementation https://gist.github.com/NaniteFactory/b181532bdde21a7401f12a0cfcffb421
-		FullScreenshot(screenshot, quality),
+		fullScreenshot(screenshotCh),
 		ActionFunc(func(ctx context.Context) error {
 			fmt.Printf("FullScreenshot page took %v\n", time.Since(now))
 			now = time.Now()
@@ -354,7 +400,7 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 		el.requests[requestID] = &Request{
 			URL:       requestURL,
 			TSRequest: now,
-			IsAd: el.isAd(requestURL),
+			IsAd:      el.isAd(requestURL),
 		}
 	}
 	if redirectResponse != nil {
@@ -447,12 +493,21 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 		}
 	})
 
-	var screenshot []byte
+	screenshotCh := make(chan []byte, 1)
 	var content string
 	var errors string
-	if err = Run(tabContext.ctx, scrapPage(url, &screenshot, &content, &errors)); err != nil {
+	if err = Run(tabContext.ctx, scrapPage(url, screenshotCh, &content, &errors)); err != nil {
 		return
 	}
+
+	screenshot := []byte{}
+	select {
+	case screenshot = <-screenshotCh:
+		break
+	case <-time.After(deadline):
+		break
+	}
+
 	report.Screenshot = base64.StdEncoding.EncodeToString(screenshot)
 	report.Content = base64.StdEncoding.EncodeToString([]byte(content))
 	report.Errors = errors
