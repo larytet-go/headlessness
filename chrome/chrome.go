@@ -208,6 +208,7 @@ func New() (browser *Browser, err error) {
 	return
 }
 
+// See implementation https://gist.github.com/NaniteFactory/b181532bdde21a7401f12a0cfcffb421
 func fullScreenshot(ch chan []byte) Action {
 	screenshot := []byte{}
 	fullScreenshotAction := FullScreenshot(50, &screenshot)
@@ -250,7 +251,6 @@ func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors 
 			now = time.Now()
 			return nil
 		}),
-		// See implementation https://gist.github.com/NaniteFactory/b181532bdde21a7401f12a0cfcffb421
 		fullScreenshot(screenshotCh),
 		ActionFunc(func(ctx context.Context) error {
 			fmt.Printf("FullScreenshot page took %v\n", time.Since(now))
