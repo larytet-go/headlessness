@@ -88,7 +88,7 @@ func commandLineMode() bool {
 	}
 
 	if url != "" {
-		browser, err := chrome.New([]string{})
+		browser, err := chrome.New(chrome.BrowserParams{})
 		if err != nil {
 			log.Fatalf("Failed to start a browste %v %v", err)
 		}
@@ -116,7 +116,10 @@ func main() {
 		return
 	}
 
-	browser, err := chrome.New([]string{chrome.WebPageCategoryMedia})
+	browser, err := chrome.New(chrome.BrowserParams{
+		SkipCategory: []string{chrome.WebPageCategoryMedia},
+	})
+
 	if err != nil {
 		log.Printf(err.Error())
 		return

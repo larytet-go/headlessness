@@ -133,6 +133,7 @@ type Report struct {
 	RequestsElapsed int64     `json:"requests_elapsed"`
 	WebPageCategory string    `json:"web_page_category"`
 	SkipCategory    bool      `json:"skip_category"`
+	Dependencies    []string  `json:"dependencies"`
 }
 
 func (r *Report) ToJSON(pretty bool) (s []byte) {
@@ -195,7 +196,12 @@ func getChromeOpions() []ExecAllocatorOption {
 	}
 }
 
-func New(skipCategory []string) (browser *Browser, err error) {
+type BrowserParams struct {
+	// WEB site categories for which I can skip screenshot
+	SkipCategory []string
+}
+
+func New(params BrowserParams) (browser *Browser, err error) {
 	maxTabs := runtime.NumCPU()
 	browser = &Browser{
 		MaxTabs:      maxTabs,
@@ -206,9 +212,12 @@ func New(skipCategory []string) (browser *Browser, err error) {
 	opts := getChromeOpions()
 	browser.browserContext.ctx, browser.browserContext.cancel = NewExecAllocator(context.Background(), opts...)
 
-	for _, category := range skipCategory {
-		browser.skipCategory[category] = struct{}{}
+	if params.SkipCategory != nil {
+		for _, category := range params.SkipCategory {
+			browser.skipCategory[category] = struct{}{}
+		}
 	}
+
 	// create contexts
 	// https://github.com/chromedp/chromedp/issues/821
 	browser.browserTab.ctx, browser.browserTab.cancel = NewContext(browser.browserContext.ctx,
@@ -327,6 +336,7 @@ type eventListener struct {
 
 	mediaFiles      int
 	imageFiles      int
+	dependencies    map[string]struct{}
 	webPageCategory string
 }
 
@@ -344,9 +354,9 @@ func (el *eventListener) removeDocumentURL(url string) {
 	delete(el.urls, url)
 }
 
-func (el *eventListener) isAd(requestURL string) bool {
+func (el *eventListener) isAd(requestURL string) (bool, string) {
 	u, err := url.Parse(requestURL)
-	return err == nil && el.adBlock.IsAd(u.Host)
+	return err == nil && el.adBlock.IsAd(u.Host), u.Host
 }
 
 // I need fetch domain enable for all URLs, and EventRequestPaused
@@ -354,7 +364,8 @@ func (el *eventListener) isAd(requestURL string) bool {
 func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 	now := time.Now()
 	requestURL := ev.Request.URL
-	isAd := el.isAd(requestURL)
+	isAd, hostname := el.isAd(requestURL)
+	el.dependencies[hostname] = struct{}{}
 	requestID := (ev.RequestID)
 	resourceType := ev.ResourceType
 	blocked := isAd ||
@@ -368,7 +379,9 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 		el.imageFiles += 1
 	}
 
-	if el.webPageCategory == "" && (el.mediaFiles > 1 || el.imageFiles > 5) {
+	// https://stackoverflow.com/questions/5216831/can-we-measure-complexity-of-web-site/13674590#13674590
+	// https://web.eecs.umich.edu/~harshavm/papers/imc11.pdf
+	if el.webPageCategory == "" && (el.mediaFiles > 1 || el.imageFiles > 5 || len(el.dependencies) > 3) {
 		el.webPageCategory = WebPageCategoryMedia
 		el.webPageCategoryCh <- el.webPageCategory
 	}
@@ -425,11 +438,13 @@ func (el *eventListener) requestWillBeSent(ev *network.EventRequestWillBeSent) {
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
 
+	isAd, hostname := el.isAd(requestURL)
+	el.dependencies[hostname] = struct{}{}
 	if _, ok := el.requests[requestID]; !ok {
 		el.requests[requestID] = &Request{
 			URL:          requestURL,
 			TSRequest:    now,
-			IsAd:         el.isAd(requestURL),
+			IsAd:         isAd,
 			ResourceType: ev.Type,
 		}
 	}
@@ -503,6 +518,7 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 		ctx:               tabContext.ctx,
 		adBlock:           b.adBlock,
 		webPageCategoryCh: webPageCategoryCh,
+		dependencies:      map[string]struct{}{},
 	}
 	defer eventListener.removeDocumentURL(url)
 	eventListener.addDocumentURL(url)
@@ -552,6 +568,13 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 	report.Requests = eventListener.dumpCollectedRequests()
 	report.Redirects = eventListener.redirects
 	report.WebPageCategory = webPageCategory
+	report.Dependencies = []string{}
+	for hostname := range eventListener.dependencies {
+		if hostname == "" {
+			continue
+		}
+		report.Dependencies = append(report.Dependencies, hostname)
+	}
 
 	return
 }
