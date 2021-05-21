@@ -119,21 +119,22 @@ const (
 )
 
 type Report struct {
-	URL             string    `json:"url"`
-	TransactionID   string    `json:"transaction_id"`
-	RequestID       string    `json:"request_id"`
-	Requests        []Request `json:"requests"`
-	Redirects       []string  `json:"redirects"`
-	SlowResponses   []string  `json:"slow_responses"`
-	Ads             []string  `json:"ads"`
-	Screenshot      string    `json:"screenshot"`
-	Content         string    `json:"content"`
-	Errors          string    `json:"errors"`
-	Elapsed         int64     `json:"elapsed"`
-	RequestsElapsed int64     `json:"requests_elapsed"`
-	WebPageCategory string    `json:"web_page_category"`
-	SkipCategory    bool      `json:"skip_category"`
-	Dependencies    []string  `json:"dependencies"`
+	URL             string         `json:"url"`
+	TransactionID   string         `json:"transaction_id"`
+	RequestID       string         `json:"request_id"`
+	Requests        []Request      `json:"requests"`
+	Redirects       []string       `json:"redirects"`
+	SlowResponses   []string       `json:"slow_responses"`
+	Ads             []string       `json:"ads"`
+	Screenshot      string         `json:"screenshot"`
+	Content         string         `json:"content"`
+	Errors          string         `json:"errors"`
+	Elapsed         int64          `json:"elapsed"`
+	RequestsElapsed int64          `json:"requests_elapsed"`
+	WebPageCategory string         `json:"web_page_category"`
+	SkipCategory    bool           `json:"skip_category"`
+	Dependencies    []string       `json:"dependencies"`
+	Metrics         map[string]int `json:"metrics"`
 }
 
 func (r *Report) ToJSON(pretty bool) (s []byte) {
@@ -326,9 +327,43 @@ func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors 
 }
 
 type webPageMetrics struct {
-	mediaFiles   int
-	imageFiles   int
+	objects      map[network.ResourceType]int
 	dependencies map[string]struct{}
+}
+
+func newWebPageMetrics() webPageMetrics {
+	return webPageMetrics{
+		objects:      map[network.ResourceType]int{},
+		dependencies: map[string]struct{}{},
+	}
+}
+
+func (wpm webPageMetrics) incMetric(metric network.ResourceType) int {
+	if counter, ok := wpm.objects[metric]; ok {
+		wpm.objects[metric] = counter + 1
+	} else {
+		wpm.objects[metric] = 1
+	}
+	return wpm.objects[metric]
+}
+
+func (wpm webPageMetrics) getMetric(metric network.ResourceType) int {
+	if counter, ok := wpm.objects[metric]; ok {
+		return counter
+	}
+	return 0
+}
+
+// https://pkg.go.dev/github.com/chromedp/cdproto/network#ResourceType
+// https://web.eecs.umich.edu/~harshavm/papers/imc11.pdf
+func (wpm webPageMetrics) isNewsSite() bool {
+	return wpm.getMetric(network.ResourceTypeMedia) > 1 ||
+		wpm.getMetric(network.ResourceTypeImage) > 5 ||
+		wpm.getMetric(network.ResourceTypeStylesheet) > 2 ||
+		wpm.getMetric(network.ResourceTypeScript) > 2 ||
+		wpm.getMetric(network.ResourceTypeXHR) > 5 ||
+		wpm.getMetric(network.ResourceTypeDocument) > 2 ||
+		len(wpm.dependencies) > 3
 }
 
 type eventListener struct {
@@ -376,16 +411,11 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 		resourceType == network.ResourceTypeXHR ||
 		resourceType == network.ResourceTypeMedia
 
-	if resourceType == network.ResourceTypeMedia {
-		el.webPageMetrics.mediaFiles += 1
-	}
-	if resourceType == network.ResourceTypeImage {
-		el.webPageMetrics.imageFiles += 1
-	}
+	el.webPageMetrics.incMetric(network.ResourceTypeMedia)
 
 	// https://stackoverflow.com/questions/5216831/can-we-measure-complexity-of-web-site/13674590#13674590
 	// https://web.eecs.umich.edu/~harshavm/papers/imc11.pdf
-	if el.webPageCategory == "" && (el.webPageMetrics.mediaFiles > 1 || el.webPageMetrics.imageFiles > 5 || len(el.webPageMetrics.dependencies) > 3) {
+	if el.webPageCategory == "" && el.webPageCategory.isNewsSite() {
 		el.webPageCategory = WebPageCategoryMedia
 		el.webPageCategoryCh <- el.webPageCategory
 	}
@@ -522,9 +552,7 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 		ctx:               tabContext.ctx,
 		adBlock:           b.adBlock,
 		webPageCategoryCh: webPageCategoryCh,
-		webPageMetrics: webPageMetrics{
-			dependencies: map[string]struct{}{},
-		},
+		webPageMetrics:    newWebPageMetrics(),
 	}
 	defer eventListener.removeDocumentURL(url)
 	eventListener.addDocumentURL(url)
@@ -580,6 +608,12 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 			continue
 		}
 		report.Dependencies = append(report.Dependencies, hostname)
+	}
+	for metric, value := range eventListener.webPageMetrics.objects {
+		if metric == "" {
+			continue
+		}
+		report.Metrics[string(metric)] = value
 	}
 
 	return
