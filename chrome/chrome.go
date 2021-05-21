@@ -217,6 +217,7 @@ func fullScreenshot(ch chan []byte) Action {
 			fullScreenshotAction(ctx) 
 			ch <- screenshot
 		}()
+		return nil
 	})
 }
 
