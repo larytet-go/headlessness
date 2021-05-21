@@ -415,7 +415,7 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 
 	// https://stackoverflow.com/questions/5216831/can-we-measure-complexity-of-web-site/13674590#13674590
 	// https://web.eecs.umich.edu/~harshavm/papers/imc11.pdf
-	if el.webPageCategory == "" && el.webPageCategory.isNewsSite() {
+	if el.webPageCategory == "" && el.webPageMetrics.isNewsSite() {
 		el.webPageCategory = WebPageCategoryMedia
 		el.webPageCategoryCh <- el.webPageCategory
 	}
