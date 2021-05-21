@@ -239,6 +239,7 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 			now = time.Now()
 			return nil
 		}),
+		// See implementation https://gist.github.com/NaniteFactory/b181532bdde21a7401f12a0cfcffb421
 		FullScreenshot(screenshot, quality),
 		ActionFunc(func(ctx context.Context) error {
 			fmt.Printf("FullScreenshot page took %v\n", time.Since(now))
