@@ -13,10 +13,13 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"math"
 
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/fetch"
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/network"
 	. "github.com/chromedp/chromedp"
 )
@@ -209,22 +212,54 @@ func New() (browser *Browser, err error) {
 }
 
 // See implementation https://github.com/chromedp/chromedp/blob/master/emulate.go#L129
-func fullScreenshot(ch chan []byte) Action {
+func fullScreenshot(ch chan []byte) EmulateAction {
 	screenshot := []byte{}
-	fullScreenshotAction := FullScreenshot(&screenshot, 50)
 	return ActionFunc(func(ctx context.Context) error {
+		// get layout metrics
+		_, _, contentSize, _, _, cssContentSize, err := page.GetLayoutMetrics().Do(ctx)
+		if err != nil {
+			return err
+		}
+		// protocol v90 changed the return parameter name (contentSize -> cssContentSize)
+		if cssContentSize != nil {
+			contentSize = cssContentSize
+		}
+		width, height := int64(math.Ceil(contentSize.Width)), int64(math.Ceil(contentSize.Height))
+		// force viewport emulation
+		err = emulation.SetDeviceMetricsOverride(width, height, 1, false).
+			WithScreenOrientation(&emulation.ScreenOrientation{
+				Type:  emulation.OrientationTypePortraitPrimary,
+				Angle: 0,
+			}).
+			Do(ctx)
+		if err != nil {
+			return err
+		}
 		go func(){
-			fullScreenshotAction(ctx) 
+			// capture screenshot
+			screenshot, err = page.CaptureScreenshot().
+				WithQuality(int64(50)).
+				WithClip(&page.Viewport{
+					X:      contentSize.X,
+					Y:      contentSize.Y,
+					Width:  contentSize.Width,
+					Height: contentSize.Height,
+					Scale:  1,
+				}).Do(ctx)
+			if err != nil {
+				return 
+			}
 			ch <- screenshot
 		}()
+
 		return nil
 	})
 }
 
+
 // Return actions scrapping a WEB page, collecting HTTP requests
 func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors *string) Tasks {
 	now := time.Now()
-	quality := 10
 
 	return Tasks{
 		network.Enable(),
