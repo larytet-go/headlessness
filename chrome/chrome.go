@@ -208,7 +208,7 @@ func New() (browser *Browser, err error) {
 	return
 }
 
-func fullScreenshot(ch chan []byte) chromedp.Action {
+func fullScreenshot(ch chan []byte) Action {
 	screenshot := []byte{}
 	fullScreenshotAction := FullScreenshot(50, &screenshot)
 	return ActionFunc(func(ctx context.Context) error {
@@ -251,7 +251,7 @@ func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors 
 			return nil
 		}),
 		// See implementation https://gist.github.com/NaniteFactory/b181532bdde21a7401f12a0cfcffb421
-		FullScreenshot(screenshot, quality),
+		fullScreenshot(screenshotCh),
 		ActionFunc(func(ctx context.Context) error {
 			fmt.Printf("FullScreenshot page took %v\n", time.Since(now))
 			now = time.Now()
@@ -465,8 +465,9 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 		return
 	}
 
+	screenshot := []byte{}
 	select {
-	case screenshot := <-screenshotCh:
+	case screenshot = <-screenshotCh:
 		break
 	case <-time.After(deadline):
 		break
