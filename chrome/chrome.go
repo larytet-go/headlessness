@@ -8,19 +8,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/url"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
-	"math"
 
-	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/dom"
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/fetch"
-	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/network"
+	"github.com/chromedp/cdproto/page"
 	. "github.com/chromedp/chromedp"
 )
 
@@ -215,31 +215,31 @@ func New() (browser *Browser, err error) {
 func fullScreenshot(ch chan []byte) EmulateAction {
 	screenshot := []byte{}
 	return ActionFunc(func(ctx context.Context) error {
-		// get layout metrics
-		_, _, contentSize, _, _, cssContentSize, err := page.GetLayoutMetrics().Do(ctx)
-		if err != nil {
-			return err
-		}
-		// protocol v90 changed the return parameter name (contentSize -> cssContentSize)
-		if cssContentSize != nil {
-			contentSize = cssContentSize
-		}
-		width, height := int64(math.Ceil(contentSize.Width)), int64(math.Ceil(contentSize.Height))
-		// force viewport emulation
-		err = emulation.SetDeviceMetricsOverride(width, height, 1, false).
-			WithScreenOrientation(&emulation.ScreenOrientation{
-				Type:  emulation.OrientationTypePortraitPrimary,
-				Angle: 0,
-			}).
-			Do(ctx)
-		if err != nil {
-			return err
-		}
-		go func(){
+		go func() {
+			// get layout metrics
+			_, _, contentSize, _, _, cssContentSize, err := page.GetLayoutMetrics().Do(ctx)
+			if err != nil {
+				return
+			}
+			// protocol v90 changed the return parameter name (contentSize -> cssContentSize)
+			if cssContentSize != nil {
+				contentSize = cssContentSize
+			}
+			width, height := int64(math.Ceil(contentSize.Width)), int64(math.Ceil(contentSize.Height))
+			// force viewport emulation
+			err = emulation.SetDeviceMetricsOverride(width, height, 1, false).
+				WithScreenOrientation(&emulation.ScreenOrientation{
+					Type:  emulation.OrientationTypePortraitPrimary,
+					Angle: 0,
+				}).
+				Do(ctx)
+			if err != nil {
+				return
+			}
 			// capture screenshot
 			screenshot, err = page.CaptureScreenshot().
+			WithClip(&page.Viewport{
 				WithQuality(int64(50)).
-				WithClip(&page.Viewport{
 					X:      contentSize.X,
 					Y:      contentSize.Y,
 					Width:  contentSize.Width,
@@ -247,7 +247,7 @@ func fullScreenshot(ch chan []byte) EmulateAction {
 					Scale:  1,
 				}).Do(ctx)
 			if err != nil {
-				return 
+				return
 			}
 			ch <- screenshot
 		}()
@@ -255,7 +255,6 @@ func fullScreenshot(ch chan []byte) EmulateAction {
 		return nil
 	})
 }
-
 
 // Return actions scrapping a WEB page, collecting HTTP requests
 func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors *string) Tasks {
@@ -401,7 +400,7 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 		el.requests[requestID] = &Request{
 			URL:       requestURL,
 			TSRequest: now,
-			IsAd: el.isAd(requestURL),
+			IsAd:      el.isAd(requestURL),
 		}
 	}
 	if redirectResponse != nil {
