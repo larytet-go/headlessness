@@ -325,6 +325,12 @@ func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors 
 	}
 }
 
+type webPageMetrics struct {
+	mediaFiles   int
+	imageFiles   int
+	dependencies map[string]struct{}
+}
+
 type eventListener struct {
 	urls              map[string]struct{}
 	redirects         []string
@@ -334,9 +340,7 @@ type eventListener struct {
 	adBlock           AdBlockIfc
 	webPageCategoryCh chan string
 
-	mediaFiles      int
-	imageFiles      int
-	dependencies    map[string]struct{}
+	webPageMetrics  webPageMetrics
 	webPageCategory string
 }
 
@@ -365,7 +369,7 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 	now := time.Now()
 	requestURL := ev.Request.URL
 	isAd, hostname := el.isAd(requestURL)
-	el.dependencies[hostname] = struct{}{}
+	el.webPageMetrics.dependencies[hostname] = struct{}{}
 	requestID := (ev.RequestID)
 	resourceType := ev.ResourceType
 	blocked := isAd ||
@@ -373,15 +377,15 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 		resourceType == network.ResourceTypeMedia
 
 	if resourceType == network.ResourceTypeMedia {
-		el.mediaFiles += 1
+		el.webPageMetrics.mediaFiles += 1
 	}
 	if resourceType == network.ResourceTypeImage {
-		el.imageFiles += 1
+		el.webPageMetrics.imageFiles += 1
 	}
 
 	// https://stackoverflow.com/questions/5216831/can-we-measure-complexity-of-web-site/13674590#13674590
 	// https://web.eecs.umich.edu/~harshavm/papers/imc11.pdf
-	if el.webPageCategory == "" && (el.mediaFiles > 1 || el.imageFiles > 5 || len(el.dependencies) > 3) {
+	if el.webPageCategory == "" && (el.webPageMetrics.mediaFiles > 1 || el.webPageMetrics.imageFiles > 5 || len(el.webPageMetrics.dependencies) > 3) {
 		el.webPageCategory = WebPageCategoryMedia
 		el.webPageCategoryCh <- el.webPageCategory
 	}
@@ -439,7 +443,7 @@ func (el *eventListener) requestWillBeSent(ev *network.EventRequestWillBeSent) {
 	defer el.mutex.Unlock()
 
 	isAd, hostname := el.isAd(requestURL)
-	el.dependencies[hostname] = struct{}{}
+	el.webPageMetrics.dependencies[hostname] = struct{}{}
 	if _, ok := el.requests[requestID]; !ok {
 		el.requests[requestID] = &Request{
 			URL:          requestURL,
@@ -518,7 +522,9 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 		ctx:               tabContext.ctx,
 		adBlock:           b.adBlock,
 		webPageCategoryCh: webPageCategoryCh,
-		dependencies:      map[string]struct{}{},
+		webPageMetrics: webPageMetrics{
+			dependencies: map[string]struct{}{},
+		},
 	}
 	defer eventListener.removeDocumentURL(url)
 	eventListener.addDocumentURL(url)
@@ -569,7 +575,7 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 	report.Redirects = eventListener.redirects
 	report.WebPageCategory = webPageCategory
 	report.Dependencies = []string{}
-	for hostname := range eventListener.dependencies {
+	for hostname := range eventListener.webPageMetrics.dependencies {
 		if hostname == "" {
 			continue
 		}
