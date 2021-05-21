@@ -609,6 +609,7 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 		}
 		report.Dependencies = append(report.Dependencies, hostname)
 	}
+	report.Metrics = map[string]int{}
 	for metric, value := range eventListener.webPageMetrics.objects {
 		if metric == "" {
 			continue
