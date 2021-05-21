@@ -112,6 +112,7 @@ type Request struct {
 	SlowHost     bool                 `json:"slow_host"`
 	ResourceType network.ResourceType `json:"resource_type"`
 	Blocked      bool                 `json:"blocked"`
+	MIME         string               `json:"mime"`
 }
 
 const (
@@ -327,18 +328,21 @@ func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors 
 }
 
 type webPageMetrics struct {
-	objects      map[network.ResourceType]int
+	mutex        sync.Mutex
+	objects      map[string]int
 	dependencies map[string]struct{}
 }
 
 func newWebPageMetrics() webPageMetrics {
 	return webPageMetrics{
-		objects:      map[network.ResourceType]int{},
+		objects:      map[string]int{},
 		dependencies: map[string]struct{}{},
 	}
 }
 
-func (wpm webPageMetrics) incMetric(metric network.ResourceType) int {
+func (wpm webPageMetrics) incMetric(metric string) int {
+	wpm.mutex.Lock()
+	defer wpm.mutex.Unlock()
 	if counter, ok := wpm.objects[metric]; ok {
 		wpm.objects[metric] = counter + 1
 	} else {
@@ -348,7 +352,7 @@ func (wpm webPageMetrics) incMetric(metric network.ResourceType) int {
 }
 
 func (wpm webPageMetrics) getMetric(metric network.ResourceType) int {
-	if counter, ok := wpm.objects[metric]; ok {
+	if counter, ok := wpm.objects[string(metric)]; ok {
 		return counter
 	}
 	return 0
@@ -369,10 +373,10 @@ func (wpm webPageMetrics) isNewsSite() bool {
 }
 
 type eventListener struct {
+	mutex             sync.Mutex
 	urls              map[string]struct{}
 	redirects         []string
 	requests          map[network.RequestID]*Request
-	mutex             sync.Mutex
 	ctx               context.Context
 	adBlock           AdBlockIfc
 	webPageCategoryCh chan string
@@ -413,7 +417,7 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 		resourceType == network.ResourceTypeXHR ||
 		resourceType == network.ResourceTypeMedia
 
-	el.webPageMetrics.incMetric(resourceType)
+	el.webPageMetrics.incMetric(string(resourceType))
 	if isAd {
 		el.webPageMetrics.incMetric("ad")
 	}
@@ -496,6 +500,8 @@ func (el *eventListener) responseReceived(ev *network.EventResponseReceived) {
 	now := time.Now()
 	requestID := ev.RequestID
 	url := ev.Response.URL
+	mime := ev.Response.MimeType
+	el.webPageMetrics.incMetric(mime)
 
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
@@ -509,6 +515,7 @@ func (el *eventListener) responseReceived(ev *network.EventResponseReceived) {
 	request.TSResponse = now
 	request.Elapsed = int(time.Since(request.TSRequest) / time.Millisecond)
 	request.SlowHost = request.Elapsed > 1000
+	request.MIME = mime
 }
 
 func (el *eventListener) requestServedFromCache(ev *network.EventRequestServedFromCache) {
