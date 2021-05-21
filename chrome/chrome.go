@@ -209,14 +209,14 @@ func New() (browser *Browser, err error) {
 }
 
 func fullScreenshot(ch chan []byte) chromedp.Action {
-	screenshot []byte
+	screenshot := []byte{}
 	fullScreenshotAction := FullScreenshot(50, &screenshot)
 	return ActionFunc(func(ctx context.Context) error {
 		go func(){
 			fullScreenshotAction(ctx) 
 			ch <- screenshot
 		}()
-	}
+	})
 }
 
 // Return actions scrapping a WEB page, collecting HTTP requests
