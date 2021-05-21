@@ -100,15 +100,17 @@ type Browser struct {
 }
 
 type Request struct {
-	URL          string    `json:"url"`
-	TSRequest    time.Time `json:"ts_request"`
-	TSResponse   time.Time `json:"ts_respons"`
-	Elapsed      int       `json:"elapsed"`
-	Status       int64     `json:"status"`
-	ResponseData []byte    `json:"response_data"`
-	FromCache    bool      `json:"from_cache"`
-	IsAd         bool      `json:"is_ad"`
-	SlowHost     bool      `json:"slow_host"`
+	URL          string               `json:"url"`
+	TSRequest    time.Time            `json:"ts_request"`
+	TSResponse   time.Time            `json:"ts_respons"`
+	Elapsed      int                  `json:"elapsed"`
+	Status       int64                `json:"status"`
+	ResponseData []byte               `json:"response_data"`
+	FromCache    bool                 `json:"from_cache"`
+	IsAd         bool                 `json:"is_ad"`
+	SlowHost     bool                 `json:"slow_host"`
+	ResourceType network.ResourceType `json:"resource_type"`
+	Blocked      bool                 `json:"blocked"`
 }
 
 type Report struct {
@@ -335,8 +337,12 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 	requestURL := ev.Request.URL
 	isAd := el.isAd(requestURL)
 	requestID := (ev.RequestID)
+	resourceType := ev.ResourceType
+	blocked := isAd ||
+		resourceType == network.ResourceTypeXHR ||
+		resourceType == network.ResourceTypeMedia
 
-	if isAd || ev.ResourceType == network.ResourceTypeMedia {
+	if blocked {
 		go el.failRequest(requestURL, requestID)
 	} else {
 		go el.continueRequest(requestURL, requestID)
@@ -347,11 +353,15 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 
 	if request, ok := el.requests[network.RequestID(requestID)]; ok {
 		request.IsAd = isAd
+		request.ResourceType = resourceType
+		request.Blocked = blocked
 	} else {
 		el.requests[network.RequestID(requestID)] = &Request{
-			URL:       requestURL,
-			TSRequest: now,
-			IsAd:      isAd,
+			URL:          requestURL,
+			TSRequest:    now,
+			IsAd:         isAd,
+			ResourceType: resourceType,
+			Blocked:      blocked,
 		}
 	}
 }
@@ -386,9 +396,10 @@ func (el *eventListener) requestWillBeSent(ev *network.EventRequestWillBeSent) {
 
 	if _, ok := el.requests[requestID]; !ok {
 		el.requests[requestID] = &Request{
-			URL:       requestURL,
-			TSRequest: now,
-			IsAd:      el.isAd(requestURL),
+			URL:          requestURL,
+			TSRequest:    now,
+			IsAd:         el.isAd(requestURL),
+			ResourceType: ev.Type,
 		}
 	}
 	if redirectResponse != nil {
