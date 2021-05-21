@@ -336,7 +336,7 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 	isAd := el.isAd(requestURL)
 	requestID := (ev.RequestID)
 
-	if isAd {
+	if isAd || ev.ResourceType == network.ResourceTypeMedia {
 		go el.failRequest(requestURL, requestID)
 	} else {
 		go el.continueRequest(requestURL, requestID)
@@ -374,12 +374,12 @@ func (el *eventListener) continueRequest(requestURL string, requestID fetch.Requ
 	}
 }
 
-func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
+func (el *eventListener) requestWillBeSent(ev *network.EventRequestWillBeSent) {
 	now := time.Now()
-	requestID := r.RequestID
-	requestURL := r.Request.URL
+	requestID := ev.RequestID
+	requestURL := ev.Request.URL
 
-	redirectResponse := r.RedirectResponse
+	redirectResponse := ev.RedirectResponse
 
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
@@ -396,10 +396,10 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	}
 }
 
-func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
+func (el *eventListener) responseReceived(ev *network.EventResponseReceived) {
 	now := time.Now()
-	requestID := r.RequestID
-	url := r.Response.URL
+	requestID := ev.RequestID
+	url := ev.Response.URL
 
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
@@ -409,15 +409,15 @@ func (el *eventListener) responseReceived(r *network.EventResponseReceived) {
 		return
 	}
 	request := el.requests[requestID]
-	request.Status = r.Response.Status
+	request.Status = ev.Response.Status
 	request.TSResponse = now
 	request.Elapsed = int(time.Since(request.TSRequest) / time.Millisecond)
 	request.SlowHost = request.Elapsed > 1000
 }
 
-func (el *eventListener) requestServedFromCache(r *network.EventRequestServedFromCache) {
+func (el *eventListener) requestServedFromCache(ev *network.EventRequestServedFromCache) {
 	now := time.Now()
-	requestID := r.RequestID
+	requestID := ev.RequestID
 
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
