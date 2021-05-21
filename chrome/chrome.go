@@ -235,13 +235,13 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 		}),
 		Navigate(urlstr),
 		ActionFunc(func(ctx context.Context) error {
-			fmt.Printf("Navigate took %v\n", time.Since(now)/time.Millisecond)
+			fmt.Printf("Navigate took %v\n", time.Since(now))
 			now = time.Now()
 			return nil
 		}),
 		FullScreenshot(screenshot, quality),
 		ActionFunc(func(ctx context.Context) error {
-			fmt.Printf("FullScreenshot took %v\n", time.Since(now)/time.Millisecond)
+			fmt.Printf("FullScreenshot took %v\n", time.Since(now))
 			now = time.Now()
 			return nil
 		}),
@@ -263,7 +263,7 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 			return nil
 		}),
 		ActionFunc(func(ctx context.Context) error {
-			fmt.Printf("GetDocument took %v\n", time.Since(now)/time.Millisecond)
+			fmt.Printf("GetDocument took %v\n", time.Since(now))
 			now = time.Now()
 			return nil
 		}),
