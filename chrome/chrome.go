@@ -364,6 +364,7 @@ func (wpm webPageMetrics) isNewsSite() bool {
 		wpm.getMetric(network.ResourceTypeScript) > 2 ||
 		wpm.getMetric(network.ResourceTypeXHR) > 5 ||
 		wpm.getMetric(network.ResourceTypeDocument) > 2 ||
+		wpm.getMetric("ad") > 2 ||
 		len(wpm.dependencies) > 3
 }
 
@@ -413,6 +414,9 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 		resourceType == network.ResourceTypeMedia
 
 	el.webPageMetrics.incMetric(resourceType)
+	if isAd {
+		el.webPageMetrics.incMetric("ad")
+	}
 
 	// https://stackoverflow.com/questions/5216831/can-we-measure-complexity-of-web-site/13674590#13674590
 	// https://web.eecs.umich.edu/~harshavm/papers/imc11.pdf
