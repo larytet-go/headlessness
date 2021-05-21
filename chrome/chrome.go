@@ -178,6 +178,7 @@ func getChromeOpions() []ExecAllocatorOption {
 		Flag("enable-automation", true),
 		Flag("password-store", "basic"),
 		Flag("use-mock-keychain", true),
+		Flag("ignore-certificate-errors", true),
 	}
 }
 
@@ -209,6 +210,24 @@ func scrapPage(urlstr string, screenshot *[]byte, content *string, errors *strin
 
 	return Tasks{
 		network.Enable(),
+		fetch.Enable().WithPatterns([]*fetch.RequestPattern{
+			{
+				ResourceType: network.ResourceTypeScript,
+				RequestStage: fetch.RequestStageRequest,
+			},
+			{
+				ResourceType: network.ResourceTypeImage,
+				RequestStage: fetch.RequestStageRequest,
+			},
+			{
+				ResourceType: network.ResourceTypeMedia,
+				RequestStage: fetch.RequestStageRequest,
+			},
+			{
+				ResourceType: network.ResourceTypeFont,
+				RequestStage: fetch.RequestStageRequest,
+			},
+		}),
 		Navigate(urlstr),
 		FullScreenshot(screenshot, quality),
 
@@ -255,21 +274,29 @@ func (el *eventListener) removeDocumentURL(url string) {
 	delete(el.urls, url)
 }
 
+func (el *eventListener) isAd(requestURL string) bool {
+	u, err := url.Parse(requestURL)
+	return err == nil && el.adBlock.IsAd(u.Host)
+}
+
 // I need fetch domain enable for all URLs, and EventRequestPaused
 // Any additional listener slowes down the requests
 func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
+	now := time.Now()
 	requestURL := ev.Request.URL
-	u, err := url.Parse(requestURL)
-	isAd := err == nil && el.adBlock.IsAd(u.Host)
+	isAd := el.isAd(requestURL)
 	requestID := (ev.RequestID)
-
 	if isAd {
 		el.mutex.Lock()
 		defer el.mutex.Unlock()
 		if request, ok := el.requests[network.RequestID(requestID)]; ok {
 			request.IsAd = true
 		} else {
-			log.Printf("requestPaused request %s [%s] is missing in the map", requestURL, requestID)
+			el.requests[network.RequestID(requestID)] = &Request{
+				URL:       requestURL,
+				TSRequest: now,
+				IsAd:      true,
+			}
 		}
 		go el.failRequest(requestURL, requestID)
 	} else {
@@ -297,7 +324,6 @@ func (el *eventListener) continueRequest(requestURL string, requestID fetch.Requ
 
 func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	now := time.Now()
-	documentURL := r.DocumentURL
 	requestID := r.RequestID
 	requestURL := r.Request.URL
 
@@ -306,17 +332,15 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	el.mutex.Lock()
 	defer el.mutex.Unlock()
 
-	if request, ok := el.requests[requestID]; ok && redirectResponse == nil {
-		log.Printf("Request %s [%s] already is in the map for url %s: request=%v, event=%v", requestURL, requestID, documentURL, request, r)
+	if _, ok := el.requests[requestID]; !ok {
+		el.requests[requestID] = &Request{
+			URL:       requestURL,
+			TSRequest: now,
+			IsAd: el.isAd(requestURL),
+		}
 	}
 	if redirectResponse != nil {
 		el.redirects = append(el.redirects, redirectResponse.URL)
-	}
-
-	// log.Printf("Add request %s [%s]", url, requestID)
-	el.requests[requestID] = &Request{
-		URL:       requestURL,
-		TSRequest: now,
 	}
 }
 
