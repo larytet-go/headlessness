@@ -255,12 +255,14 @@ func (el *eventListener) removeDocumentURL(url string) {
 	delete(el.urls, url)
 }
 
+// I need fetch domain enable for all URLs, and EventRequestPaused
+// Any additional listener slowes down the requests
 func (el *eventListener) failRequest(requestURL string, requestID network.RequestID) {
 	chromedpContext := FromContext(el.ctx)
 	execCtx := cdp.WithExecutor(el.ctx, chromedpContext.Target)
 	err := fetch.FailRequest(fetch.RequestID(requestID), network.ErrorReasonFailed).Do(execCtx)
 	if err != nil {
-		log.Printf("fetch.FailRequest for url %v %v", requestURL, err)
+		log.Printf("Failed to abort the request for url %v: %v", requestURL, err)
 	}
 
 }
@@ -290,9 +292,6 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 		URL:       requestURL,
 		TSRequest: now,
 		IsAd:      isAd,
-	}
-	if isAd{
-		go el.failRequest(requestURL, requestID)
 	}
 }
 
