@@ -126,6 +126,7 @@ type Report struct {
 	Errors          string    `json:"errors"`
 	Elapsed         int64     `json:"elapsed"`
 	RequestsElapsed int64     `json:"requests_elapsed"`
+	WebPageCategory string    `json:"web_page_category"`
 }
 
 func (r *Report) ToJSON(pretty bool) (s []byte) {
@@ -303,12 +304,16 @@ func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors 
 }
 
 type eventListener struct {
-	urls      map[string]struct{}
-	redirects []string
-	requests  map[network.RequestID]*Request
-	mutex     sync.Mutex
-	ctx       context.Context
-	adBlock   AdBlockIfc
+	urls              map[string]struct{}
+	redirects         []string
+	requests          map[network.RequestID]*Request
+	mutex             sync.Mutex
+	ctx               context.Context
+	adBlock           AdBlockIfc
+	webPageCategoryCh chan string
+
+	mediaFiles int
+	imageFiles int
 }
 
 func (el *eventListener) addDocumentURL(url string) {
@@ -341,6 +346,17 @@ func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
 	blocked := isAd ||
 		resourceType == network.ResourceTypeXHR ||
 		resourceType == network.ResourceTypeMedia
+
+	if resourceType == network.ResourceTypeMedia {
+		el.mediaFiles += 1
+	}
+	if resourceType == network.ResourceTypeImage {
+		el.imageFiles += 1
+	}
+
+	if el.mediaFiles > 1 || el.imageFiles > 5 {
+		el.webPageCategoryCh <- "media"
+	}
 
 	if blocked {
 		go el.failRequest(requestURL, requestID)
@@ -464,12 +480,14 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 	tabContext.ctx, tabContext.cancel = NewContext(b.browserTab.ctx)
 	defer tabContext.cancel()
 
+	webPageCategoryCh := make(chan string, 1)
 	eventListener := &eventListener{
-		requests:  map[network.RequestID]*Request{},
-		redirects: []string{},
-		urls:      map[string]struct{}{},
-		ctx:       tabContext.ctx,
-		adBlock:   b.adBlock,
+		requests:          map[network.RequestID]*Request{},
+		redirects:         []string{},
+		urls:              map[string]struct{}{},
+		ctx:               tabContext.ctx,
+		adBlock:           b.adBlock,
+		webPageCategoryCh: webPageCategoryCh,
 	}
 	defer eventListener.removeDocumentURL(url)
 	eventListener.addDocumentURL(url)
@@ -500,7 +518,10 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 	}
 
 	screenshot := []byte{}
+	var webPageCategory string
 	select {
+	case webPageCategory = <-webPageCategoryCh:
+		break
 	case screenshot = <-screenshotCh:
 		break
 	case <-time.After(deadline):
@@ -512,6 +533,7 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 	report.Errors = errors
 	report.Requests = eventListener.dumpCollectedRequests()
 	report.Redirects = eventListener.redirects
+	report.WebPageCategory = webPageCategory
 
 	return
 }
