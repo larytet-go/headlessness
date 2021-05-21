@@ -34,6 +34,7 @@ type PoolOfBrowserTabs struct {
 }
 
 // Returns a pool (stack) of browser tabs
+// This code is not in use
 func NewPoolOfBrowserTabs(newExecAllocator context.Context, size int) *PoolOfBrowserTabs {
 	contexts := make([]contextWithCancel, size)
 
@@ -195,6 +196,9 @@ func New() (browser *Browser, err error) {
 	browser.browserTab.ctx, browser.browserTab.cancel = NewContext(browser.browserContext.ctx,
 		WithErrorf(log.Printf), //WithErrorf, WithDebugf
 	)
+	// Run the browser in the first time
+	// https://github.com/chromedp/chromedp/issues/824
+	Run(browser.browserTab.ctx)
 
 	browser.adBlock, err = NewAdBlockList([]string{"./ads-servers.txt", "./ads-servers.he.txt"})
 	if err != nil {
@@ -398,9 +402,7 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 
 	tabContext := contextWithCancel{}
 	// Allocate a free tab from the pool of the browser tabs
-	tabContext.ctx, tabContext.cancel = NewContext(b.browserTab.ctx,
-		WithErrorf(log.Printf), //WithErrorf, WithDebugf)
-	)
+	tabContext.ctx, tabContext.cancel = NewContext(b.browserTab.ctx)
 	defer tabContext.cancel()
 
 	eventListener := &eventListener{
