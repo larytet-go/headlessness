@@ -208,7 +208,7 @@ func New() (browser *Browser, err error) {
 	return
 }
 
-// See implementation https://gist.github.com/NaniteFactory/b181532bdde21a7401f12a0cfcffb421
+// See implementation https://github.com/chromedp/chromedp/blob/master/emulate.go#L129
 func fullScreenshot(ch chan []byte) Action {
 	screenshot := []byte{}
 	fullScreenshotAction := FullScreenshot(50, &screenshot)
