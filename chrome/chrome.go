@@ -257,23 +257,49 @@ func (el *eventListener) removeDocumentURL(url string) {
 
 // I need fetch domain enable for all URLs, and EventRequestPaused
 // Any additional listener slowes down the requests
-func (el *eventListener) failRequest(requestURL string, requestID network.RequestID) {
+func (el *eventListener) requestPaused(ev *fetch.EventRequestPaused) {
+	requestURL := ev.Request.URL
+	u, err := url.Parse(requestURL)
+	isAd := err == nil && el.adBlock.IsAd(u.Host)
+	requestID := (ev.RequestID)
+
+	if isAd {
+		el.mutex.Lock()
+		defer el.mutex.Unlock()
+		if request, ok := el.requests[network.RequestID(requestID)]; ok {
+			request.IsAd = true
+		} else {
+			log.Printf("requestPaused request %s [%s] is missing in the map", requestURL, requestID)
+		}
+		go el.failRequest(requestURL, requestID)
+	} else {
+		go el.continueRequest(requestURL, requestID)
+	}
+}
+
+func (el *eventListener) failRequest(requestURL string, requestID fetch.RequestID) {
 	chromedpContext := FromContext(el.ctx)
 	execCtx := cdp.WithExecutor(el.ctx, chromedpContext.Target)
-	err := fetch.FailRequest(fetch.RequestID(requestID), network.ErrorReasonFailed).Do(execCtx)
+	err := fetch.FailRequest(requestID, network.ErrorReasonFailed).Do(execCtx)
 	if err != nil {
 		log.Printf("Failed to abort the request for url %v: %v", requestURL, err)
 	}
-
 }
+
+func (el *eventListener) continueRequest(requestURL string, requestID fetch.RequestID) {
+	chromedpContext := FromContext(el.ctx)
+	execCtx := cdp.WithExecutor(el.ctx, chromedpContext.Target)
+	err := fetch.ContinueRequest(requestID).Do(execCtx)
+	if err != nil {
+		log.Printf("Failed to continue the request for url %v: %v", requestURL, err)
+	}
+}
+
 func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	now := time.Now()
 	documentURL := r.DocumentURL
 	requestID := r.RequestID
 	requestURL := r.Request.URL
-
-	u, err := url.Parse(requestURL)
-	isAd := err == nil && el.adBlock.IsAd(u.Host)
 
 	redirectResponse := r.RedirectResponse
 
@@ -291,7 +317,6 @@ func (el *eventListener) requestWillBeSent(r *network.EventRequestWillBeSent) {
 	el.requests[requestID] = &Request{
 		URL:       requestURL,
 		TSRequest: now,
-		IsAd:      isAd,
 	}
 }
 
@@ -377,6 +402,8 @@ func (b *Browser) Report(url string, deadline time.Duration) (report *Report, er
 			eventListener.requestWillBeSent(ev.(*network.EventRequestWillBeSent))
 		case *network.EventResponseReceived:
 			eventListener.responseReceived(ev.(*network.EventResponseReceived))
+		case *fetch.EventRequestPaused:
+			eventListener.requestPaused(ev.(*fetch.EventRequestPaused))
 		}
 	})
 
