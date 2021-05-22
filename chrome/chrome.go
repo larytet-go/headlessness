@@ -171,6 +171,8 @@ func getChromeOpions() []ExecAllocatorOption {
 		NoDefaultBrowserCheck,
 		NoSandbox,
 		// Headless,
+		// See counter headless detection https://github.com/chromedp/chromedp/issues/396
+		UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36"),
 		// Flag("remote-debugging-port", "9222"), https://github.com/chromedp/chromedp/issues/821
 		Flag("disable-background-networking", true),
 		Flag("enable-features", "NetworkService,NetworkServiceInProcess"),
