@@ -103,22 +103,21 @@ func getURLs(r *http.Request) (urls []string, err error) {
 func copyBodyToFile(r *http.Request) (filename string, err error) {
 	defer r.Body.Close()
 
-
 	if r.ContentLength <= 0 {
 		return nil, fmt.Errorf("No payload")
 	}
 
 	filename = randomFilename(6)
 	f, err := os.Create(filename)
-    if err != nil {
+	if err != nil {
 		return nil, fmt.Errorf("Failed to open %v %v", filename, err)
 	}
 	defer f.Close()
 
 	_, err := io.Copy(f, r.Body)
-    if err != nil {
+	if err != nil {
 		return nil, fmt.Errorf("Failed to write to %v %v", filename, err)
-    }
+	}
 
 	return
 }
@@ -179,4 +178,3 @@ func (h *HTTPHandler) stats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte("Ok"))
 }
-
