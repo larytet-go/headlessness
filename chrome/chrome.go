@@ -369,7 +369,7 @@ func (wpm webPageMetrics) isNewsSite() bool {
 		wpm.getMetric(network.ResourceTypeXHR) > 5 ||
 		wpm.getMetric(network.ResourceTypeDocument) > 2 ||
 		wpm.getMetric("ad") > 4 ||
-		len(wpm.dependencies) > 3
+		len(wpm.dependencies) > 10
 }
 
 type eventListener struct {
