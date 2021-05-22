@@ -170,6 +170,7 @@ func getChromeOpions() []ExecAllocatorOption {
 		NoFirstRun,
 		NoDefaultBrowserCheck,
 		NoSandbox,
+		WindowSize(1920, 1080),
 		// Headless,
 		// See counter headless detection https://github.com/chromedp/chromedp/issues/396
 		UserAgent("Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:88.0) Gecko/20100101 Firefox/88.0"),
