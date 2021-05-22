@@ -329,7 +329,7 @@ func scrapPage(urlstr string, screenshotCh chan []byte, content *string, errors 
 		ActionFunc(func(ctx context.Context) error {
 			scriptID, err := page.AddScriptToEvaluateOnNewDocument(counterDetectionScript).Do(ctx)
 			if err != nil {
-				*errors += "AddScriptToEvaluateOnNewDocument:" + err.Error() + ". "
+				*errors += fmt.Sprintf("AddScriptToEvaluateOnNewDocument %v:", scriptID) + err.Error() + ". "
 				return err
 			}
 			return nil
