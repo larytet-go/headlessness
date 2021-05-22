@@ -362,13 +362,13 @@ func (wpm webPageMetrics) getMetric(metric network.ResourceType) int {
 // https://web.eecs.umich.edu/~harshavm/papers/imc11.pdf
 func (wpm webPageMetrics) isNewsSite() bool {
 	return wpm.getMetric(network.ResourceTypeMedia) > 1 ||
-		wpm.getMetric(network.ResourceTypeImage) > 10 ||
-		wpm.getMetric(network.ResourceTypeFont) > 3 ||
+		wpm.getMetric(network.ResourceTypeImage) > 50 ||
+		wpm.getMetric(network.ResourceTypeFont) > 5 ||
 		wpm.getMetric(network.ResourceTypeStylesheet) > 2 ||
-		wpm.getMetric(network.ResourceTypeScript) > 2 ||
+		wpm.getMetric(network.ResourceTypeScript) > 10 ||
 		wpm.getMetric(network.ResourceTypeXHR) > 5 ||
 		wpm.getMetric(network.ResourceTypeDocument) > 2 ||
-		wpm.getMetric("ad") > 2 ||
+		wpm.getMetric("ad") > 4 ||
 		len(wpm.dependencies) > 3
 }
 
