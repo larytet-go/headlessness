@@ -132,7 +132,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/fetch", httpHandler.report)
 	mux.HandleFunc("/stats", httpHandler.stats)
-	mux.HandleFunc("/screenshot", httpHandler.screenshot)
+	mux.HandleFunc("/open_file", httpHandler.open_file)
 
 	httpServer := http.Server{
 		Addr:           ":8081",
